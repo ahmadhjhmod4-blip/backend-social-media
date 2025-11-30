@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <title>مشروع السوشال ميديا</title>
+
+    <!-- أيقونات FontAwesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+
+    <!-- ملف الستايل الأساسي -->
+    <link rel="stylesheet" href="assets/css/style.css" />
+  </head>
+
+  <body class="home-body">
+    <div class="app-layout">
+      <!-- الهيدر العلوي الجديد -->
+      <header class="top-nav">
+        <div class="top-nav-left">
+          <div class="logo-circle">S</div>
+          <div class="logo-text">Social App</div>
+        </div>
+
+        <div class="top-nav-center">
+          <div class="search-box">
+            <input
+              type="text"
+              placeholder="ابحث عن منشور، صديق، أو هاشتاغ..."
+            />
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </div>
+        </div>
+
+        <div class="top-nav-right">
+          <button class="icon-btn" title="الصفحة الرئيسية">
+            <i class="fa-solid fa-house"></i>
+          </button>
+          <button class="icon-btn" title="الإشعارات">
+            <i class="fa-regular fa-bell"></i>
+            <span class="badge" id="notifBadge">3</span>
+          </button>
+          <button class="icon-btn" title="الرسائل">
+            <i class="fa-regular fa-comments"></i>
+          </button>
+
+          <!-- صورة المستخدم + الاسم، للدخول إلى صفحة البروفايل -->
+          <div class="nav-user" onclick="window.location.href='profile.html'">
+            <img
+              id="navUserAvatar"
+              class="nav-user-avatar"
+              src="https://via.placeholder.com/64x64?text=User"
+              alt="user"
+            />
+            <span class="nav-user-name" id="navUserName">مستخدم</span>
+          </div>
+
+          <!-- زر تسجيل الخروج انشال من الهيدر هنا، رح نخليه في صفحة البروفايل -->
+        </div>
+      </header>
+
+      <!-- محتوى الصفحة الرئيسي -->
+      <div class="main-layout">
+        <!-- سايدبار يسار: البروفايل والتنقل -->
+        <aside class="sidebar-left">
+          <div class="side-profile">
+            <img
+              id="sideUserAvatar"
+              class="side-avatar"
+              src="https://via.placeholder.com/80x80?text=User"
+              alt="avatar"
+            />
+            <div class="side-username" id="sideUserName">اسم المستخدم</div>
+            <div class="side-email" id="sideUserEmail">user@example.com</div>
+            <div class="welcome-text" id="welcomeUser">مرحباً 👋</div>
+          </div>
+
+          <a class="side-link" href="index.html">
+            <i class="fa-solid fa-house"></i> الرئيسية
+          </a>
+          <a class="side-link" href="profile.html">
+            <i class="fa-regular fa-user"></i> الملف الشخصي
+          </a>
+          <div class="side-link">
+            <i class="fa-regular fa-bell"></i> الإشعارات
+          </div>
+          <div class="side-link">
+            <i class="fa-regular fa-comments"></i> الدردشة
+          </div>
+
+          <!-- الإعدادات وتسجيل الخروج انشالوا من هون، رح يكونوا في صفحة البروفايل -->
+        </aside>
+
+        <!-- منطقة الـ Feed فقط (بدون إنشاء منشور) -->
+        <main class="feed-area">
+          <!-- ما عاد في create-post-wrapper هون -->
+
+          <!-- قائمة المنشورات -->
+          <h2 class="section-heading">آخر المنشورات</h2>
+          <div id="posts"></div>
+        </main>
+
+        <!-- سايدبار يمين: إشعارات + دردشة (تصميم فقط حالياً) -->
+        <aside class="sidebar-right">
+          <div class="sidebar-title">
+            <i class="fa-regular fa-bell"></i> الإشعارات
+          </div>
+          <div class="placeholder-box">
+            لا توجد إشعارات حالياً.<br />
+            سيتم عرض آخر الإعجابات والتعليقات هنا لاحقاً.
+          </div>
+
+          <div class="sidebar-title">
+            <i class="fa-regular fa-comments"></i> الدردشة
+          </div>
+          <div class="placeholder-box">
+            قسم الدردشة سيكون هنا.<br />
+            يمكنك مستقبلاً عرض قائمة الأصدقاء والرسائل.
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- ملف الجافاسكربت الأساسي -->
+    <script src="assets/js/app.js"></script>
+
+    <!-- سكربت بسيط لجلب البروفايل وملء البيانات -->
+    <script>
+      // جلب بيانات المستخدم الحالي من /api/profile
+      async function loadCurrentUserProfile() {
+        let token =
+          localStorage.getItem("token") || localStorage.getItem("authToken");
+
+        if (!token) return;
+
+        try {
+          const res = await fetch("/api/profile", {
+            headers: {
+              Authorization: "Bearer " + token,
+            },
+          });
+
+          if (!res.ok) return;
+
+          const data = await res.json();
+
+          // ملء الهيدر
+          const navUserName = document.getElementById("navUserName");
+          const navUserAvatar = document.getElementById("navUserAvatar");
+
+          if (navUserName) navUserName.textContent = data.username || "مستخدم";
+          if (navUserAvatar && data.avatar) navUserAvatar.src = data.avatar;
+
+          // ملء السايدبار
+          const sideUserName = document.getElementById("sideUserName");
+          const sideUserEmail = document.getElementById("sideUserEmail");
+          const sideUserAvatar = document.getElementById("sideUserAvatar");
+
+          if (sideUserName) sideUserName.textContent = data.username || "";
+          if (sideUserEmail) sideUserEmail.textContent = data.email || "";
+          if (sideUserAvatar && data.avatar) sideUserAvatar.src = data.avatar;
+
+          // رسالة الترحيب
+          const welcome = document.getElementById("welcomeUser");
+          if (welcome) {
+            welcome.textContent = "مرحباً 👋 " + (data.username || "");
+          }
+        } catch (err) {
+          console.error("Error loading profile in index:", err);
+        }
+      }
+
+      loadCurrentUserProfile();
+    </script>
+  </body>
+</html>

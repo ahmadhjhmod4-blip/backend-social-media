@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <title>تجربة التسجيل - مشروع السوشال ميديا</title>
+    <style>
+      body {
+        background-color: #111;
+        color: #fff;
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+
+      .container {
+        background-color: #1c1c1c;
+        padding: 20px 25px;
+        border-radius: 8px;
+        width: 320px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+      }
+
+      input {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 12px;
+        border-radius: 4px;
+        border: 1px solid #444;
+        background-color: #000;
+        color: #fff;
+      }
+
+      button {
+        width: 100%;
+        padding: 10px;
+        border: none;
+        border-radius: 4px;
+        background-color: #00b894;
+        color: #000;
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      button:hover {
+        background-color: #00e0ac;
+      }
+
+      .msg {
+        margin-top: 15px;
+        text-align: center;
+        font-size: 14px;
+        min-height: 18px;
+      }
+
+      .error {
+        color: #ff7675;
+      }
+
+      .success {
+        color: #55efc4;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>تسجيل حساب جديد</h1>
+
+      <label for="name">الاسم</label>
+      <input type="text" id="name" placeholder="اكتب اسمك" />
+
+      <label for="email">البريد الإلكتروني</label>
+      <input type="email" id="email" placeholder="example@mail.com" />
+
+      <label for="password">كلمة المرور</label>
+      <input type="password" id="password" placeholder="*******" />
+
+      <button id="registerBtn">تسجيل</button>
+
+      <div id="msg" class="msg"></div>
+    </div>
+
+    <script>
+      const API_BASE = "http://localhost:5000/api"; // نفس البورت اللي شغال عليه السيرفر
+
+      const nameInput = document.getElementById("name");
+      const emailInput = document.getElementById("email");
+      const passwordInput = document.getElementById("password");
+      const registerBtn = document.getElementById("registerBtn");
+      const msgDiv = document.getElementById("msg");
+
+      registerBtn.addEventListener("click", async () => {
+        const name = nameInput.value.trim();
+        const email = emailInput.value.trim();
+        const password = passwordInput.value.trim();
+
+        msgDiv.textContent = "";
+        msgDiv.className = "msg";
+
+        if (!name || !email || !password) {
+          msgDiv.textContent = "يرجى تعبئة جميع البيانات";
+          msgDiv.classList.add("error");
+          return;
+        }
+
+        try {
+          const res = await fetch(`${API_BASE}/register`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ name, email, password }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            // خطأ من السيرفر (مثل: هذا البريد مستخدم مسبقاً)
+            msgDiv.textContent = data.msg || "حدث خطأ";
+            msgDiv.classList.add("error");
+          } else {
+            msgDiv.textContent = data.msg || "تم إنشاء الحساب بنجاح";
+            msgDiv.classList.add("success");
+            // ممكن تفضي الحقول
+            // nameInput.value = "";
+            // emailInput.value = "";
+            // passwordInput.value = "";
+          }
+        } catch (err) {
+          console.error(err);
+          msgDiv.textContent = "تعذر الاتصال بالسيرفر";
+          msgDiv.classList.add("error");
+        }
+      });
+    </script>
+  </body>
+</html>

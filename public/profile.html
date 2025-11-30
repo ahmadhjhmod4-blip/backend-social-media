@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>البروفايل - مشروع السوشال ميديا</title>
+
+    <!-- أيقونات احترافية -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+
+    <style>
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        background: #020308;
+        color: #fff;
+        font-family: Arial, sans-serif;
+      }
+
+      /* الكرت الأساسي للبروفايل */
+      .profile-card {
+        width: 100%;
+        max-width: 480px;
+        min-height: 100vh;
+        margin: 0 auto;
+        background: #050712;
+        border-radius: 0;
+        overflow: hidden;
+        box-shadow: none;
+        border: none;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* غلاف البروفايل */
+      .profile-cover {
+        height: 130px;
+        background: linear-gradient(135deg, #020617, #060b1b, #020617);
+        position: relative;
+      }
+
+      /* الصورة فوق الغلاف بدون translate معقّد */
+      .profile-avatar-wrapper {
+        margin-top: -60px;
+        display: flex;
+        justify-content: center;
+        position: relative;
+      }
+
+      .profile-avatar {
+        width: 110px;
+        height: 110px;
+        border-radius: 50%;
+        border: 4px solid #050712;
+        overflow: hidden;
+        background: #020617;
+      }
+
+      .profile-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .avatar-edit-btn {
+        position: absolute;
+        right: calc(50% - 65px);
+        bottom: 4px;
+        background: #0ea5e9;
+        border-radius: 999px;
+        border: none;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 10px rgba(15, 23, 42, 0.8);
+      }
+
+      .avatar-edit-btn i {
+        font-size: 14px;
+        color: #0b1120;
+      }
+
+      .profile-body {
+        flex: 1;
+        padding: 60px 16px 24px;
+      }
+
+      .profile-main-info {
+        text-align: center;
+      }
+
+      .profile-name {
+        font-size: 20px;
+        font-weight: bold;
+      }
+
+      .profile-email {
+        font-size: 13px;
+        color: #9ca3af;
+        margin-top: 3px;
+      }
+
+      .profile-username-sub {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 2px;
+      }
+
+      .profile-stats {
+        display: flex;
+        justify-content: space-around;
+        margin: 16px 0 10px;
+        font-size: 13px;
+      }
+
+      .stat-item {
+        text-align: center;
+      }
+
+      .stat-label {
+        color: #9ca3af;
+        margin-top: 2px;
+      }
+
+      .stat-number {
+        font-size: 18px;
+        font-weight: bold;
+      }
+
+      /* أزرار الإعدادات وتسجيل الخروج */
+      .profile-actions-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 14px;
+        justify-content: center;
+        max-width: 360px;
+        margin-right: auto;
+        margin-left: auto;
+      }
+
+      .icon-btn-pill {
+        flex: 1;
+        border-radius: 999px;
+        border: 1px solid #111827;
+        background: #020617;
+        color: #e5e7eb;
+        padding: 6px 8px;
+        font-size: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s, transform 0.1s;
+      }
+
+      .icon-btn-pill i {
+        font-size: 13px;
+      }
+
+      .icon-btn-pill:hover {
+        background: #0b1120;
+        border-color: #1d4ed8;
+      }
+
+      .icon-btn-pill.logout {
+        background: #1f1723;
+        border-color: #7f1d1d;
+        color: #fecaca;
+      }
+
+      .icon-btn-pill.logout:hover {
+        background: #450a0a;
+      }
+
+      .section-label {
+        text-align: right;
+        font-size: 13px;
+        margin-top: 18px;
+        margin-bottom: 6px;
+        color: #9ca3af;
+      }
+
+      .field {
+        text-align: right;
+        margin-top: 4px;
+      }
+
+      .field label {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 4px;
+      }
+
+      .field input[type="text"] {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid #111827;
+        outline: none;
+        background: #020617;
+        color: #fff;
+        font-size: 13px;
+      }
+
+      .field input[type="text"]:focus {
+        border-color: #2563eb;
+      }
+
+      .save-btn,
+      .back-btn {
+        margin-top: 10px;
+        width: 100%;
+        max-width: 360px;
+        border-radius: 999px;
+        padding: 7px 0;
+        border: none;
+        cursor: pointer;
+        font-size: 13px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .save-btn {
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        color: #fff;
+        font-weight: bold;
+      }
+
+      .save-btn i {
+        font-size: 14px;
+      }
+
+      .back-btn {
+        background: #111827;
+        color: #e5e7eb;
+      }
+
+      .back-btn i {
+        font-size: 14px;
+      }
+
+      .message {
+        margin-top: 8px;
+        font-size: 12px;
+        min-height: 16px;
+        text-align: center;
+      }
+
+      .message.success {
+        color: #4ade80;
+      }
+
+      .message.error {
+        color: #fb7185;
+      }
+
+      input[type="file"] {
+        display: none;
+      }
+
+      /* عنوان إنشاء منشور */
+      .create-post-title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 20px;
+        border-top: 1px solid #111827;
+        padding-top: 12px;
+      }
+
+      .create-post-title-row span {
+        font-size: 13px;
+        color: #9ca3af;
+      }
+
+      .toggle-create-btn {
+        border-radius: 999px;
+        border: none;
+        background: #111827;
+        color: #e5e7eb;
+        padding: 5px 10px;
+        font-size: 11px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+      }
+
+      .toggle-create-btn i {
+        font-size: 13px;
+      }
+
+      /* المودال المغطي للشاشة */
+      .create-post-wrapper {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.65);
+        z-index: 1000;
+        padding: 16px;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .create-post-wrapper.open {
+        display: flex;
+      }
+
+      .create-post-modal {
+        width: 100%;
+        max-width: 420px;
+        transform: translateY(20px);
+        opacity: 0;
+        transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+      }
+
+      .create-post-wrapper.open .create-post-modal {
+        transform: translateY(0);
+        opacity: 1;
+      }
+
+      .create-post-card {
+        background: #020617;
+        border-radius: 16px;
+        border: 1px solid #111827;
+        padding: 12px 14px;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.8);
+      }
+
+      .create-post-card textarea {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid #1f2937;
+        background: #020617;
+        color: #e5e7eb;
+        padding: 8px 10px;
+        font-size: 13px;
+        resize: vertical;
+        min-height: 70px;
+      }
+
+      .create-post-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 8px;
+        gap: 8px;
+      }
+
+      .create-post-icons {
+        display: flex;
+        gap: 6px;
+      }
+
+      .round-icon-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        border: none;
+        background: #020617;
+        border: 1px solid #1f2937;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: #e5e7eb;
+        font-size: 14px;
+      }
+
+      .round-icon-btn:hover {
+        background: #0b1120;
+      }
+
+      .create-post-actions {
+        display: flex;
+        gap: 6px;
+        justify-content: flex-end;
+      }
+
+      .btn-send,
+      .btn-cancel {
+        border-radius: 999px;
+        border: none;
+        padding: 5px 10px;
+        font-size: 11px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+      }
+
+      .btn-send {
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        color: #fff;
+        font-weight: bold;
+      }
+
+      .btn-cancel {
+        background: #111827;
+        color: #e5e7eb;
+      }
+
+      .btn-send i,
+      .btn-cancel i {
+        font-size: 13px;
+      }
+
+      .create-extra-inputs {
+        margin-top: 8px;
+      }
+
+      .create-extra-inputs input[type="text"] {
+        width: 100%;
+        border-radius: 999px;
+        border: 1px solid #1f2937;
+        background: #020617;
+        color: #e5e7eb;
+        padding: 6px 10px;
+        font-size: 12px;
+        margin-top: 6px;
+      }
+
+      .create-msg {
+        margin-top: 5px;
+        font-size: 12px;
+      }
+
+      .create-msg.success {
+        color: #4ade80;
+      }
+
+      .create-msg.error {
+        color: #fb7185;
+      }
+
+      /* موبايل صغير جداً */
+      @media (max-width: 480px) {
+        .profile-body {
+          padding: 50px 14px 20px;
+        }
+
+        .profile-avatar {
+          width: 95px;
+          height: 95px;
+        }
+
+        .profile-actions-row {
+          flex-direction: column;
+        }
+
+        .save-btn,
+        .back-btn {
+          max-width: 100%;
+        }
+
+        .create-post-card {
+          border-radius: 14px;
+          padding: 10px 12px;
+        }
+      }
+
+      /* على الشاشات الكبيرة: كرت في الوسط بظل وزوايا */
+      @media (min-width: 900px) {
+        body {
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+          padding: 30px 10px;
+        }
+
+        .profile-card {
+          max-width: 420px;
+          border-radius: 20px;
+          box-shadow: 0 18px 45px rgba(0, 0, 0, 0.8);
+          border: 1px solid #111827;
+          min-height: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="profile-card">
+      <!-- غلاف + صورة بروفايل -->
+      <div class="profile-cover"></div>
+      <div class="profile-avatar-wrapper">
+        <div class="profile-avatar">
+          <img
+            id="avatarImg"
+            src="https://via.placeholder.com/110x110?text=Avatar"
+            alt="avatar"
+          />
+        </div>
+        <button
+          class="avatar-edit-btn"
+          id="editAvatarBtn"
+          title="تغيير الصورة"
+        >
+          <i class="fa-solid fa-camera"></i>
+        </button>
+      </div>
+
+      <div class="profile-body">
+        <!-- معلومات رئيسية -->
+        <div class="profile-main-info">
+          <div class="profile-name" id="usernameText">اسم المستخدم</div>
+          <div class="profile-email" id="emailText">user@example.com</div>
+          <div class="profile-username-sub" id="usernameSub">@username</div>
+        </div>
+
+        <!-- إحصائيات -->
+        <div class="profile-stats">
+          <div class="stat-item">
+            <div class="stat-number" id="postsCount">0</div>
+            <div class="stat-label">المنشورات</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number" id="memberSince">-</div>
+            <div class="stat-label">سنة الانضمام</div>
+          </div>
+        </div>
+
+        <!-- أزرار رئيسية بإيقونات -->
+        <div class="profile-actions-row">
+          <button class="icon-btn-pill" id="saveSettingsBtnTop">
+            <i class="fa-solid fa-gear"></i>
+            <span>الإعدادات</span>
+          </button>
+          <button class="icon-btn-pill logout" id="logoutBtnTop">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>تسجيل الخروج</span>
+          </button>
+        </div>
+
+        <!-- قسم الإعدادات -->
+        <div class="section-label">الإعدادات</div>
+        <div class="field">
+          <label for="usernameInput">تعديل اسم المستخدم:</label>
+          <input type="text" id="usernameInput" />
+        </div>
+
+        <button class="save-btn" id="saveBtn">
+          <i class="fa-solid fa-floppy-disk"></i>
+          <span>حفظ التغييرات</span>
+        </button>
+
+        <button class="back-btn" id="backBtn">
+          <i class="fa-solid fa-arrow-right"></i>
+          <span>رجوع للصفحة الرئيسية</span>
+        </button>
+
+        <div class="message" id="messageBox"></div>
+
+        <!-- عنوان إنشاء منشور -->
+        <div class="create-post-title-row">
+          <span>إنشاء منشور جديد</span>
+          <button class="toggle-create-btn" id="toggleCreatePostBtn">
+            <i class="fa-solid fa-square-plus"></i>
+            <span>إنشاء منشور</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- مودال إنشاء المنشور في وسط الشاشة -->
+    <div class="create-post-wrapper" id="createPostWrapper">
+      <div class="create-post-modal">
+        <div class="create-post-card" id="createPostCard">
+          <textarea
+            id="text"
+            placeholder="اكتب ما تريد مشاركته..."
+          ></textarea>
+
+          <div class="create-post-toolbar">
+            <div class="create-post-icons">
+              <!-- زر اختيار وسائط -->
+              <button
+                type="button"
+                class="round-icon-btn"
+                id="mediaIconBtn"
+                title="إضافة صورة / فيديو"
+              >
+                <i class="fa-regular fa-image"></i>
+              </button>
+
+              <!-- زر التركيز على حقل الرابط -->
+              <button
+                type="button"
+                class="round-icon-btn"
+                id="linkIconBtn"
+                title="إضافة رابط"
+              >
+                <i class="fa-solid fa-link"></i>
+              </button>
+            </div>
+
+            <div class="create-post-actions">
+              <button type="button" class="btn-cancel" id="closeCreatePostBtn">
+                <i class="fa-solid fa-xmark"></i>
+                <span>إلغاء</span>
+              </button>
+              <button type="button" class="btn-send" id="sendPostBtn">
+                <i class="fa-solid fa-paper-plane"></i>
+                <span>نشر</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="create-extra-inputs">
+            <input
+              type="file"
+              id="media"
+              accept="image/*,video/*"
+              style="display: none"
+            />
+
+            <input
+              type="text"
+              id="link"
+              placeholder="رابط خارجي (اختياري)"
+            />
+          </div>
+
+          <div id="createMsg" class="create-msg"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // جلب التوكن
+      let token =
+        localStorage.getItem("token") || localStorage.getItem("authToken");
+
+      if (!token) {
+        window.location.href = "login.html";
+      }
+
+      const avatarImg = document.getElementById("avatarImg");
+      const usernameText = document.getElementById("usernameText");
+      const usernameSub = document.getElementById("usernameSub");
+      const emailText = document.getElementById("emailText");
+      const postsCountEl = document.getElementById("postsCount");
+      const memberSinceEl = document.getElementById("memberSince");
+      const usernameInput = document.getElementById("usernameInput");
+      const saveBtn = document.getElementById("saveBtn");
+      const saveSettingsBtnTop =
+        document.getElementById("saveSettingsBtnTop");
+      const backBtn = document.getElementById("backBtn");
+      const logoutBtnTop = document.getElementById("logoutBtnTop");
+      const avatarInput = document.createElement("input");
+      avatarInput.type = "file";
+      avatarInput.accept = "image/*";
+      const editAvatarBtn = document.getElementById("editAvatarBtn");
+      const messageBox = document.getElementById("messageBox");
+
+      // إنشاء منشور
+      const toggleCreatePostBtn = document.getElementById("toggleCreatePostBtn");
+      const createPostWrapper = document.getElementById("createPostWrapper");
+      const createPostCard = document.getElementById("createPostCard");
+      const closeCreatePostBtn =
+        document.getElementById("closeCreatePostBtn");
+      const sendPostBtn = document.getElementById("sendPostBtn");
+      const mediaIconBtn = document.getElementById("mediaIconBtn");
+      const linkIconBtn = document.getElementById("linkIconBtn");
+      const createMsg = document.getElementById("createMsg");
+      const textInput = document.getElementById("text");
+      const mediaInput = document.getElementById("media");
+      const linkInput = document.getElementById("link");
+
+      let selectedAvatarFile = null;
+
+      function showMessage(text, type = "success") {
+        messageBox.textContent = text;
+        messageBox.className = "message " + type;
+      }
+
+      // ✅ جلب بيانات البروفايل
+      async function loadProfile() {
+        try {
+          const res = await fetch("/api/profile", {
+            headers: {
+              Authorization: "Bearer " + token,
+            },
+          });
+
+          if (!res.ok) {
+            if (res.status === 401) {
+              localStorage.removeItem("token");
+              localStorage.removeItem("authToken");
+              return (window.location.href = "login.html");
+            }
+            throw new Error("فشل جلب البروفايل");
+          }
+
+          const data = await res.json();
+
+          usernameText.textContent = data.username;
+          usernameSub.textContent = "@" + (data.username || "user");
+          emailText.textContent = data.email;
+          postsCountEl.textContent = data.postsCount ?? 0;
+
+          if (data.createdAt) {
+            const year = new Date(data.createdAt).getFullYear();
+            memberSinceEl.textContent = year;
+          } else {
+            memberSinceEl.textContent = "-";
+          }
+
+          usernameInput.value = data.username;
+
+          if (data.avatar) {
+            avatarImg.src = data.avatar;
+          }
+        } catch (err) {
+          console.error(err);
+          showMessage("حدث خطأ أثناء تحميل البروفايل", "error");
+        }
+      }
+
+      // ✅ فتح اختيار الصورة عند الضغط على زر الكاميرا
+      editAvatarBtn.addEventListener("click", () => {
+        avatarInput.click();
+      });
+
+      avatarInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          selectedAvatarFile = file;
+          const reader = new FileReader();
+          reader.onload = function (ev) {
+            avatarImg.src = ev.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      // ✅ حفظ التغييرات (اسم + صورة)
+      async function saveProfile() {
+        try {
+          const formData = new FormData();
+          const newUsername = usernameInput.value.trim();
+
+          if (newUsername) formData.append("username", newUsername);
+          if (selectedAvatarFile) formData.append("avatar", selectedAvatarFile);
+
+          const res = await fetch("/api/profile", {
+            method: "PUT",
+            headers: {
+              Authorization: "Bearer " + token,
+            },
+            body: formData,
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(data.msg || "فشل تحديث البروفايل");
+          }
+
+          showMessage("تم حفظ التغييرات بنجاح ✅", "success");
+
+          if (data.user) {
+            usernameText.textContent = data.user.username;
+            usernameInput.value = data.user.username;
+            usernameSub.textContent = "@" + (data.user.username || "user");
+            if (data.user.avatar) {
+              avatarImg.src = data.user.avatar;
+            }
+          }
+        } catch (err) {
+          console.error(err);
+          showMessage(err.message, "error");
+        }
+      }
+
+      saveBtn.addEventListener("click", saveProfile);
+      saveSettingsBtnTop.addEventListener("click", () => {
+        usernameInput.focus();
+      });
+
+      // ✅ زر تسجيل الخروج
+      function logout() {
+        localStorage.removeItem("token");
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("user");
+        window.location.href = "login.html";
+      }
+
+      logoutBtnTop.addEventListener("click", logout);
+
+      // ✅ زر الرجوع للصفحة الرئيسية
+      backBtn.addEventListener("click", () => {
+        window.location.href = "index.html";
+      });
+
+      // ✅ فتح المودال في وسط الشاشة
+      if (toggleCreatePostBtn && createPostWrapper) {
+        toggleCreatePostBtn.addEventListener("click", () => {
+          createPostWrapper.classList.add("open");
+          setTimeout(() => {
+            textInput && textInput.focus();
+          }, 150);
+        });
+      }
+
+      // ✅ إغلاق بالمفتاح إلغاء
+      if (closeCreatePostBtn && createPostWrapper) {
+        closeCreatePostBtn.addEventListener("click", () => {
+          createPostWrapper.classList.remove("open");
+        });
+      }
+
+      // ✅ إغلاق عند الضغط على الخلفية السوداء
+      if (createPostWrapper) {
+        createPostWrapper.addEventListener("click", (e) => {
+          if (e.target === createPostWrapper) {
+            createPostWrapper.classList.remove("open");
+          }
+        });
+      }
+
+      // ✅ زر أيقونة الوسائط يفتح اختيار الملف
+      mediaIconBtn.addEventListener("click", () => {
+        mediaInput.click();
+      });
+
+      // ✅ زر أيقونة الرابط يركز على حقل الرابط
+      linkIconBtn.addEventListener("click", () => {
+        linkInput.focus();
+      });
+
+      // ✅ إنشاء منشور جديد من صفحة البروفايل
+      async function createPost() {
+        if (!token) return;
+
+        createMsg.textContent = "";
+        createMsg.className = "create-msg";
+
+        const text = textInput.value.trim();
+        const link = linkInput.value.trim();
+        const file = mediaInput.files[0];
+
+        if (!text && !file && !link) {
+          createMsg.textContent =
+            "أضف نصاً أو وسائط أو رابطاً على الأقل قبل النشر.";
+          createMsg.classList.add("error");
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("text", text);
+        if (link) formData.append("link", link);
+        if (file) formData.append("media", file);
+
+        try {
+          const res = await fetch("/api/posts", {
+            method: "POST",
+            headers: {
+              Authorization: "Bearer " + token,
+            },
+            body: formData,
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(data.msg || "فشل إنشاء المنشور");
+          }
+
+          createMsg.textContent = "تم نشر المنشور بنجاح ✅";
+          createMsg.classList.add("success");
+
+          textInput.value = "";
+          linkInput.value = "";
+          mediaInput.value = "";
+        } catch (err) {
+          console.error(err);
+          createMsg.textContent = err.message;
+          createMsg.classList.add("error");
+        }
+      }
+
+      sendPostBtn.addEventListener("click", createPost);
+
+      // تحميل البروفايل عند فتح الصفحة
+      loadProfile();
+    </script>
+  </body>
+</html>
