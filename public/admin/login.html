@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <title>تسجيل دخول المشرفين - Saepel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- يمكنك لاحقاً ربط CSS خاص بالمشرفين -->
+    <link rel="stylesheet" href="/assets/admin/admin.css" />
+  </head>
+  <body>
+    <div class="admin-page">
+      <div class="admin-card">
+        <h1 class="admin-title">لوحة المشرفين - Saepel</h1>
+        <p class="admin-subtitle">
+          هذه الصفحة مخصصة للمشرفين لمراجعة البلاغات وإدارة المحتوى.
+        </p>
+
+        <form id="adminLoginForm" class="admin-form">
+          <label class="admin-label">
+            البريد الإلكتروني أو اسم المستخدم
+            <input
+              type="text"
+              id="identifier"
+              class="admin-input"
+              placeholder="example@mail.com أو @username"
+              autocomplete="username"
+              required
+            />
+          </label>
+
+          <label class="admin-label">
+            كلمة المرور
+            <input
+              type="password"
+              id="password"
+              class="admin-input"
+              placeholder="••••••••"
+              autocomplete="current-password"
+              required
+            />
+          </label>
+
+          <button type="submit" class="admin-btn">
+            دخول المشرف
+          </button>
+
+          <p id="adminError" class="admin-error" style="display: none"></p>
+        </form>
+
+        <p class="admin-note">
+          إذا لم تكن مشرفاً، يمكنك استخدام
+          <a href="/login.html">صفحة تسجيل الدخول العادية</a>.
+        </p>
+      </div>
+    </div>
+
+    <!-- سكربت تسجيل الدخول للمشرفين -->
+    <script src="/assets/admin/admin-login.js"></script>
+  </body>
+</html>

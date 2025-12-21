@@ -2,173 +2,440 @@
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <title>تسجيل الدخول - مشروع السوشال ميديا</title>
+    <title>تسجيل الدخول - Saepel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- أيقونات -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
     <style>
-      body {
-        background-color: #111;
-        color: #fff;
-        font-family: Arial, sans-serif;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
+      * {
+        box-sizing: border-box;
         margin: 0;
+        padding: 0;
       }
 
-      .container {
-        background-color: #1c1c1c;
-        padding: 20px 25px;
-        border-radius: 8px;
-        width: 320px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(
+          circle at top left,
+          #28357a 0,
+          #050814 40%,
+          #000 100%
+        );
+        color: #f5f7ff;
+        overflow: hidden;
+      }
+
+      .bg-orbs {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        overflow: hidden;
+      }
+
+      .bg-orb {
+        position: absolute;
+        width: 380px;
+        height: 380px;
+        border-radius: 50%;
+        filter: blur(60px);
+        opacity: 0.35;
+      }
+
+      .bg-orb:nth-child(1) {
+        background: #4f46e5;
+        top: -80px;
+        right: -100px;
+      }
+
+      .bg-orb:nth-child(2) {
+        background: #ec4899;
+        bottom: -100px;
+        left: -80px;
+      }
+
+      .bg-orb:nth-child(3) {
+        background: #22c55e;
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        opacity: 0.18;
+      }
+
+      .card {
+        width: 100%;
+        max-width: 410px;
+        padding: 28px 26px 30px;
+        border-radius: 26px;
+        background: rgba(15, 23, 42, 0.72);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        backdrop-filter: blur(22px);
+        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.9);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+
+      .brand-logo {
+        width: 38px;
+        height: 38px;
+        border-radius: 16px;
+        background: radial-gradient(circle at 20% 20%, #a855f7, #0ea5e9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 18px;
+      }
+
+      .brand-text-title {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+
+      .brand-text-sub {
+        font-size: 12px;
+        color: #cbd5f5;
       }
 
       h1 {
-        text-align: center;
-        margin-bottom: 20px;
         font-size: 20px;
+        margin-bottom: 6px;
+      }
+
+      .subtitle {
+        font-size: 13px;
+        color: #cbd5f5;
+        margin-bottom: 18px;
+      }
+
+      form {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
       }
 
       label {
-        display: block;
-        margin-bottom: 5px;
+        font-size: 13px;
+        color: #e5e7eb;
+      }
+
+      .input-wrapper {
+        position: relative;
+      }
+
+      .input-wrapper i {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
         font-size: 14px;
       }
 
-      input {
-        width: 100%;
-        padding: 8px;
-        margin-bottom: 12px;
-        border-radius: 4px;
-        border: 1px solid #444;
-        background-color: #000;
-        color: #fff;
+      .input-wrapper i.left {
+        right: 12px;
       }
 
-      button {
-        width: 100%;
-        padding: 10px;
-        border: none;
-        border-radius: 4px;
-        background-color: #0984e3;
-        color: #fff;
-        font-weight: bold;
+      .input-wrapper i.toggle-password {
+        left: 12px;
         cursor: pointer;
-        font-size: 14px;
       }
 
-      button:hover {
-        background-color: #74b9ff;
+      input[type="email"],
+      input[type="password"],
+      input[type="text"] {
+        width: 100%;
+        padding: 10px 36px 10px 36px;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.45);
+        background: rgba(15, 23, 42, 0.78);
+        color: #f9fafb;
+        font-size: 13px;
+        outline: none;
+        transition: border 0.18s, box-shadow 0.18s, background 0.18s;
       }
 
-      .msg {
-        margin-top: 15px;
-        text-align: center;
-        font-size: 14px;
-        min-height: 18px;
+      input::placeholder {
+        color: #6b7280;
       }
 
-      .error {
-        color: #ff7675;
+      input:focus {
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.5);
+        background: rgba(15, 23, 42, 0.98);
       }
 
-      .success {
-        color: #55efc4;
+      .actions-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 4px;
+        margin-bottom: 4px;
+      }
+
+      .checkbox-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #d1d5db;
+      }
+
+      .checkbox-wrapper input {
+        width: 14px;
+        height: 14px;
       }
 
       .link {
-        margin-top: 10px;
-        text-align: center;
-        font-size: 13px;
-      }
-
-      .link a {
-        color: #00cec9;
+        font-size: 12px;
+        color: #38bdf8;
+        cursor: pointer;
         text-decoration: none;
       }
 
-      .link a:hover {
+      .link:hover {
         text-decoration: underline;
+      }
+
+      .btn-primary {
+        margin-top: 6px;
+        width: 100%;
+        padding: 10px 0;
+        border-radius: 999px;
+        border: none;
+        background: linear-gradient(135deg, #0ea5e9, #6366f1);
+        color: white;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: transform 0.12s ease, box-shadow 0.12s ease,
+          filter 0.12s ease;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 24px rgba(59, 130, 246, 0.45);
+        filter: brightness(1.03);
+      }
+
+      .btn-primary:active {
+        transform: translateY(0);
+        box-shadow: none;
+        filter: brightness(0.98);
+      }
+
+      .footer-txt {
+        margin-top: 14px;
+        font-size: 12px;
+        text-align: center;
+        color: #9ca3af;
+      }
+
+      .footer-txt a {
+        color: #38bdf8;
+      }
+
+      .alert {
+        margin-bottom: 8px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        font-size: 12px;
+      }
+
+      .alert-error {
+        background: rgba(248, 113, 113, 0.12);
+        border: 1px solid rgba(248, 113, 113, 0.5);
+        color: #fecaca;
+      }
+
+      .alert-success {
+        background: rgba(52, 211, 153, 0.12);
+        border: 1px solid rgba(52, 211, 153, 0.6);
+        color: #bbf7d0;
+      }
+
+      @media (max-width: 480px) {
+        .card {
+          margin: 16px;
+          padding: 22px 18px 24px;
+          border-radius: 22px;
+        }
+
+        h1 {
+          font-size: 18px;
+        }
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <h1>تسجيل الدخول</h1>
+    <div class="bg-orbs">
+      <div class="bg-orb"></div>
+      <div class="bg-orb"></div>
+      <div class="bg-orb"></div>
+    </div>
 
-      <label for="email">البريد الإلكتروني</label>
-      <input type="email" id="email" placeholder="example@mail.com" />
-
-      <label for="password">كلمة المرور</label>
-      <input type="password" id="password" placeholder="*******" />
-
-      <button id="loginBtn">دخول</button>
-
-      <div id="msg" class="msg"></div>
-
-      <div class="link">
-        ما عندك حساب؟
-        <!-- لو صفحة التسجيل اسمها غير test.html عدّل الاسم هون -->
-        <a href="test.html">إنشاء حساب جديد</a>
+    <div class="card">
+      <div class="brand">
+        <div class="brand-logo">S</div>
+        <div>
+          <div class="brand-text-title">Saepel</div>
+          <div class="brand-text-sub">مرحباً بعودتك 👋</div>
+        </div>
       </div>
+
+      <h1>تسجيل الدخول</h1>
+      <p class="subtitle">تابع التواصل مع مجتمعك في Saepel.</p>
+
+      <div id="loginMessage" class="alert" style="display: none"></div>
+
+      <form id="loginForm">
+        <div class="field">
+          <label for="loginIdentifier">البريد الإلكتروني أو اسم المستخدم</label>
+          <div class="input-wrapper">
+            <i class="fa-regular fa-envelope left"></i>
+            <input
+              id="loginIdentifier"
+              type="text"
+              placeholder="example@domain.com أو @username"
+              autocomplete="username"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="loginPassword">كلمة المرور</label>
+          <div class="input-wrapper">
+            <i class="fa-solid fa-lock left"></i>
+            <input
+              id="loginPassword"
+              type="password"
+              placeholder="أدخل كلمة المرور"
+              autocomplete="current-password"
+              required
+            />
+            <i
+              class="fa-regular fa-eye toggle-password"
+              id="toggleLoginPassword"
+            ></i>
+          </div>
+        </div>
+
+        <div class="actions-row">
+          <label class="checkbox-wrapper">
+            <input type="checkbox" id="rememberMe" />
+            <span>تذكرني</span>
+          </label>
+          <a href="#" class="link">نسيت كلمة المرور؟</a>
+        </div>
+
+        <button type="submit" class="btn-primary" id="loginBtn">
+          تسجيل الدخول
+        </button>
+      </form>
+
+      <p class="footer-txt">
+        ما عندك حساب؟ <a href="register.html">إنشاء حساب جديد</a>
+      </p>
     </div>
 
     <script>
-      const API_BASE = "http://localhost:5000/api"; // نفس السيرفر
+      // ✅ نستخدم نفس الأصل (origin) اللي الصفحة شغّالة منه
+      // مثلاً: http://localhost:5000 أو https://your-app.onrender.com
+      const API_BASE = window.location.origin + "/api";
 
-      const emailInput = document.getElementById("email");
-      const passwordInput = document.getElementById("password");
+      const loginForm = document.getElementById("loginForm");
+      const loginMessage = document.getElementById("loginMessage");
       const loginBtn = document.getElementById("loginBtn");
-      const msgDiv = document.getElementById("msg");
 
-      loginBtn.addEventListener("click", async () => {
-        const email = emailInput.value.trim();
-        const password = passwordInput.value.trim();
+      const loginPasswordInput = document.getElementById("loginPassword");
+      const toggleLoginPassword = document.getElementById("toggleLoginPassword");
 
-        msgDiv.textContent = "";
-        msgDiv.className = "msg";
+      toggleLoginPassword.addEventListener("click", () => {
+        const isPassword = loginPasswordInput.type === "password";
+        loginPasswordInput.type = isPassword ? "text" : "password";
+        toggleLoginPassword.classList.toggle("fa-eye");
+        toggleLoginPassword.classList.toggle("fa-eye-slash");
+      });
 
-        if (!email || !password) {
-          msgDiv.textContent = "الرجاء إدخال البريد وكلمة المرور";
-          msgDiv.classList.add("error");
+      function showLoginMessage(text, type = "error") {
+        loginMessage.style.display = "block";
+        loginMessage.textContent = text;
+        loginMessage.className =
+          "alert " + (type === "error" ? "alert-error" : "alert-success");
+      }
+
+      loginForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const identifier = document
+          .getElementById("loginIdentifier")
+          .value.trim();
+        const password = loginPasswordInput.value;
+
+        if (!identifier || !password) {
+          showLoginMessage(
+            "الرجاء إدخال البريد/اسم المستخدم وكلمة المرور.",
+            "error"
+          );
           return;
         }
 
+        loginBtn.disabled = true;
+        loginBtn.textContent = "جاري تسجيل الدخول...";
+
         try {
-          const res = await fetch(API_BASE + "/login", {
+          const res = await fetch(API_BASE + "/auth/login", {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ email, password }),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ identifier, password }),
           });
 
           const data = await res.json();
 
           if (!res.ok) {
-            msgDiv.textContent = data.msg || "حدث خطأ في تسجيل الدخول";
-            msgDiv.classList.add("error");
+            showLoginMessage(data.msg || "خطأ في تسجيل الدخول.", "error");
           } else {
-            msgDiv.textContent = data.msg || "تم تسجيل الدخول بنجاح";
-            msgDiv.classList.add("success");
-
-            // حفظ التوكن وبيانات المستخدم
-            if (data.token) {
-              localStorage.setItem("token", data.token);
-            }
-            if (data.user) {
+            // خزن التوكن واليوزر
+            if (data.token) localStorage.setItem("token", data.token);
+            if (data.user)
               localStorage.setItem("user", JSON.stringify(data.user));
-            }
 
-            // ✅ بعد تسجيل الدخول → روح على index.html بدل posts.html
+            showLoginMessage(
+              "تم تسجيل الدخول بنجاح، جارٍ التحويل...",
+              "success"
+            );
+
+            // تحويل للصفحة الرئيسية (index.html)
             setTimeout(() => {
-              window.location.href = "index.html";
-            }, 600);
+              window.location.href = "/"; // السيرفر بيرجع index.html على "/"
+            }, 800);
           }
         } catch (err) {
           console.error(err);
-          msgDiv.textContent = "تعذر الاتصال بالسيرفر";
-          msgDiv.classList.add("error");
+          showLoginMessage("حدث خطأ غير متوقع، حاول مرة أخرى.", "error");
+        } finally {
+          loginBtn.disabled = false;
+          loginBtn.textContent = "تسجيل الدخول";
         }
       });
     </script>

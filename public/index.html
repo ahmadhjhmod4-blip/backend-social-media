@@ -2,176 +2,876 @@
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <title>مشروع السوشال ميديا</title>
+    <title>Saepel - الرئيسية</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- أيقونات FontAwesome -->
+    <!-- أيقونات Font Awesome -->
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
     />
 
-    <!-- ملف الستايل الأساسي -->
+    <!-- ملف التصميم الرئيسي -->
     <link rel="stylesheet" href="assets/css/style.css" />
+    <!-- ⭐ ملف تصميم قائمة الثلاث نقاط -->
+    <link rel="stylesheet" href="assets/css/postMenu.css" />
+    <!-- ⭐ ملف تصميم القصص -->
+    <link rel="stylesheet" href="assets/css/stories.css" />
   </head>
+  <body>
+    <!-- خلفية orbs -->
+    <div class="bg-orbs">
+      <div class="bg-orb orb-1"></div>
+      <div class="bg-orb orb-2"></div>
+      <div class="bg-orb orb-3"></div>
+    </div>
 
-  <body class="home-body">
-    <div class="app-layout">
-      <!-- الهيدر العلوي الجديد -->
-      <header class="top-nav">
-        <div class="top-nav-left">
-          <div class="logo-circle">S</div>
-          <div class="logo-text">Social App</div>
+    <div class="app-shell">
+      <!-- شريط علوي -->
+      <header class="top-nav glass">
+        <!-- زر القائمة + لوجو -->
+        <div class="logo-area">
+          <!-- زر القائمة الجانبية الجديد -->
+          <button
+            class="icon-btn"
+            id="mainMenuBtn"
+            type="button"
+            title="القائمة"
+            aria-label="القائمة"
+          >
+            <i class="fa-solid fa-bars"></i>
+          </button>
+
+          <div class="logo-icon">S</div>
+          <div class="logo-text">
+            <span>Saepel</span>
+            <span>شبكتك الاجتماعية العصرية</span>
+          </div>
         </div>
 
-        <div class="top-nav-center">
-          <div class="search-box">
+        <div class="nav-center">
+          <div class="nav-search">
             <input
               type="text"
-              placeholder="ابحث عن منشور، صديق، أو هاشتاغ..."
+              id="searchInput"
+              placeholder="ابحث عن أشخاص أو منشورات..."
             />
             <i class="fa-solid fa-magnifying-glass"></i>
           </div>
         </div>
 
-        <div class="top-nav-right">
-          <button class="icon-btn" title="الصفحة الرئيسية">
-            <i class="fa-solid fa-house"></i>
+        <div class="nav-actions">
+          <!-- ✅ زر الرسائل مع id -->
+          <button
+            class="icon-btn"
+            title="الرسائل"
+            id="topMessagesBtn"
+            type="button"
+          >
+            <i class="fa-regular fa-message"></i>
           </button>
-          <button class="icon-btn" title="الإشعارات">
-            <i class="fa-regular fa-bell"></i>
-            <span class="badge" id="notifBadge">3</span>
-          </button>
-          <button class="icon-btn" title="الرسائل">
-            <i class="fa-regular fa-comments"></i>
-          </button>
-
-          <!-- صورة المستخدم + الاسم، للدخول إلى صفحة البروفايل -->
-          <div class="nav-user" onclick="window.location.href='profile.html'">
-            <img
-              id="navUserAvatar"
-              class="nav-user-avatar"
-              src="https://via.placeholder.com/64x64?text=User"
-              alt="user"
-            />
-            <span class="nav-user-name" id="navUserName">مستخدم</span>
-          </div>
-
-          <!-- زر تسجيل الخروج انشال من الهيدر هنا، رح نخليه في صفحة البروفايل -->
         </div>
       </header>
 
-      <!-- محتوى الصفحة الرئيسي -->
-      <div class="main-layout">
-        <!-- سايدبار يسار: البروفايل والتنقل -->
-        <aside class="sidebar-left">
-          <div class="side-profile">
-            <img
-              id="sideUserAvatar"
-              class="side-avatar"
-              src="https://via.placeholder.com/80x80?text=User"
-              alt="avatar"
-            />
-            <div class="side-username" id="sideUserName">اسم المستخدم</div>
-            <div class="side-email" id="sideUserEmail">user@example.com</div>
-            <div class="welcome-text" id="welcomeUser">مرحباً 👋</div>
+      <!-- ✅ صف القصص -->
+      <section class="stories-row">
+        <!-- كرت إضافة قصة -->
+        <div class="story-card glass story-add" id="storyAdd">
+          <div class="story-inner">
+            <div class="story-avatar story-add-avatar">
+              <i class="fa-solid fa-plus"></i>
+            </div>
+            <div class="story-label">إضافة قصة</div>
+          </div>
+        </div>
+
+        <!-- هنا رح نرسم القصص ديناميكياً من JS -->
+        <div class="stories-scroll" id="storiesList"></div>
+      </section>
+
+      <!-- العمود الرئيسي -->
+      <main class="main-column">
+        <!-- إنشاء منشور -->
+        <section class="create-post-card glass">
+          <div class="create-post-top">
+            <div class="avatar-lg" id="currentUserAvatar">A</div>
+            <div class="fake-input" id="openCreateModal">
+              <span id="createPlaceholder">شو حابب تشارك اليوم؟</span>
+              <i class="fa-regular fa-pen-to-square"></i>
+            </div>
           </div>
 
-          <a class="side-link" href="index.html">
-            <i class="fa-solid fa-house"></i> الرئيسية
-          </a>
-          <a class="side-link" href="profile.html">
-            <i class="fa-regular fa-user"></i> الملف الشخصي
-          </a>
-          <div class="side-link">
-            <i class="fa-regular fa-bell"></i> الإشعارات
-          </div>
-          <div class="side-link">
-            <i class="fa-regular fa-comments"></i> الدردشة
-          </div>
-
-          <!-- الإعدادات وتسجيل الخروج انشالوا من هون، رح يكونوا في صفحة البروفايل -->
-        </aside>
-
-        <!-- منطقة الـ Feed فقط (بدون إنشاء منشور) -->
-        <main class="feed-area">
-          <!-- ما عاد في create-post-wrapper هون -->
-
-          <!-- قائمة المنشورات -->
-          <h2 class="section-heading">آخر المنشورات</h2>
-          <div id="posts"></div>
-        </main>
-
-        <!-- سايدبار يمين: إشعارات + دردشة (تصميم فقط حالياً) -->
-        <aside class="sidebar-right">
-          <div class="sidebar-title">
-            <i class="fa-regular fa-bell"></i> الإشعارات
-          </div>
-          <div class="placeholder-box">
-            لا توجد إشعارات حالياً.<br />
-            سيتم عرض آخر الإعجابات والتعليقات هنا لاحقاً.
+          <div class="create-post-actions">
+            <button class="cp-btn" id="cpMedia">
+              <i class="fa-solid fa-photo-film"></i>
+              <span>صورة / فيديو</span>
+            </button>
+            <button class="cp-btn" id="cpLink">
+              <i class="fa-solid fa-link"></i>
+              <span>رابط</span>
+            </button>
+            <button class="cp-btn">
+              <i class="fa-regular fa-face-smile"></i>
+              <span>حالة</span>
+            </button>
           </div>
 
-          <div class="sidebar-title">
-            <i class="fa-regular fa-comments"></i> الدردشة
+          <!-- رسائل النجاح / الخطأ -->
+          <div id="createMsg" class="create-msg"></div>
+        </section>
+
+        <!-- هنا JS رح يعرض المنشورات من الباك إند -->
+        <div id="posts"></div>
+      </main>
+    </div>
+
+    <!-- زر عائم (ديسكتوب فقط) -->
+    <button class="fab-new-post" id="fabOpen">
+      <i class="fa-solid fa-plus"></i>
+    </button>
+
+    <!-- شريط سفلي للجوال -->
+    <nav class="bottom-nav glass">
+      <div class="bottom-nav-btn active" data-nav="home" id="bottomHome">
+        <i class="fa-solid fa-house"></i>
+        <span>الرئيسية</span>
+      </div>
+      <div class="bottom-nav-btn">
+        <i class="fa-solid fa-clapperboard-play"></i>
+        <span>ريلز</span>
+      </div>
+      <div class="bottom-nav-btn add-btn" id="bottomAdd">
+        <i class="fa-solid fa-circle-plus"></i>
+        <span>منشور</span>
+      </div>
+      <div class="bottom-nav-btn">
+        <i class="fa-regular fa-bell"></i>
+        <span>إشعارات</span>
+      </div>
+      <div class="bottom-nav-btn" id="bottomProfile">
+        <i class="fa-regular fa-user"></i>
+        <span>بروفايل</span>
+      </div>
+    </nav>
+
+    <!-- مودال إنشاء منشور -->
+    <div class="modal-overlay" id="createPostModal">
+      <div class="modal glass soft-shadow">
+        <div class="modal-header">
+          <div class="modal-title">إنشاء منشور</div>
+          <button class="modal-close" id="closeModalBtn">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="modal-user">
+            <div class="avatar-lg" id="modalUserAvatar">A</div>
+            <div class="modal-user-info">
+              <span id="modalUserName">مستخدم</span>
+              <span class="privacy-pill" id="privacyToggle">
+                <i class="fa-solid fa-earth-asia"></i>
+                عام
+              </span>
+            </div>
           </div>
-          <div class="placeholder-box">
-            قسم الدردشة سيكون هنا.<br />
-            يمكنك مستقبلاً عرض قائمة الأصدقاء والرسائل.
+
+          <textarea id="postText" placeholder="شو حابب تكتب؟"></textarea>
+
+          <div class="modal-media-row">
+            <button
+              class="modal-media-btn"
+              id="modalAddMediaBtn"
+              type="button"
+              style="
+                background: linear-gradient(135deg, #6e4aff, #00d1ff);
+                border: none;
+              "
+            >
+              <i class="fa-solid fa-photo-film"></i>
+              <span>إضافة صورة / فيديو</span>
+            </button>
+            <button
+              class="modal-media-btn"
+              id="modalAddLinkBtn"
+              type="button"
+              style="
+                background: linear-gradient(135deg, #22c55e, #06b6d4);
+                border: none;
+              "
+            >
+              <i class="fa-solid fa-link"></i>
+              <span>إضافة رابط</span>
+            </button>
           </div>
-        </aside>
+
+          <input
+            type="file"
+            id="postMediaInput"
+            accept="image/*,video/*"
+            style="display: none"
+          />
+
+          <div id="postMediaPreview"></div>
+
+          <input
+            type="url"
+            id="postLinkInput"
+            class="text-input"
+            placeholder="يمكنك إضافة رابط (اختياري)"
+          />
+
+          <div class="modal-footer">
+            <button class="btn-primary" id="publishBtn" disabled>نشر</button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- ملف الجافاسكربت الأساسي -->
+    <!-- ✅ مودال إنشاء ستوري -->
+    <div class="story-create-overlay" id="storyCreateOverlay">
+      <div class="story-create-modal">
+        <div class="sc-header">
+          <h3>إنشاء ستوري</h3>
+          <button class="sc-close" id="scCloseBtn" type="button">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="sc-tabs">
+          <button
+            class="sc-tab sc-tab-active"
+            data-tab="media"
+            type="button"
+          >
+            صورة / فيديو
+          </button>
+          <!-- جاهز لاحقاً لو حبّينا نفعّل "نص فقط" -->
+          <button class="sc-tab" data-tab="text" type="button" style="display:none;">
+            نص فقط
+          </button>
+        </div>
+
+        <!-- تبويب الصورة/الفيديو -->
+        <div class="sc-body sc-body-active" id="scMediaTab">
+          <label class="sc-upload-label">
+            <input
+              type="file"
+              id="scFileInput"
+              accept="image/*,video/*"
+              hidden
+            />
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <span>اختر صورة أو فيديو من جهازك</span>
+          </label>
+
+          <div class="sc-preview" id="scPreview">
+            <span class="sc-preview-placeholder">
+              ستظهر المعاينة هنا بعد اختيار الملف
+            </span>
+          </div>
+        </div>
+
+        <!-- تبويب النص فقط (غير مفعّل حالياً) -->
+        <div class="sc-body" id="scTextTab">
+          <textarea
+            id="scTextInput"
+            class="sc-textarea"
+            placeholder="اكتب نص الستوري هنا..."
+          ></textarea>
+          <div class="sc-text-preview">
+            <div class="sc-text-story" id="scTextStoryPreview">
+              اكتب شيئاً جميلاً ✨
+            </div>
+          </div>
+        </div>
+
+        <div class="sc-footer">
+          <button class="sc-submit-btn" id="scSubmitBtn" type="button">
+            نشر الستوري
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- ✅ نهاية مودال إنشاء ستوري -->
+
+    <!-- ===== قائمة Saepel الجانبية ===== -->
+    <div class="side-menu-overlay" id="sideMenu">
+      <div class="side-menu glass soft-shadow">
+        <div class="side-menu-header">
+          <div class="menu-user">
+            <div class="avatar-sm" id="welcomeUser">A</div>
+            <div class="menu-user-info">
+              <span id="menuUserName">مستخدم Saepel</span>
+              <span class="menu-user-hint">مرحباً بك 👋</span>
+            </div>
+          </div>
+
+          <button class="close-menu" id="closeMenuBtn" type="button">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <ul class="menu-list">
+          <li class="menu-item" data-action="profile">
+            <i class="fa-solid fa-user"></i>
+            <span>ملفي الشخصي</span>
+          </li>
+          <li class="menu-item" data-action="analytics">
+            <i class="fa-solid fa-chart-line"></i>
+            <span>تحليلات الحساب</span>
+          </li>
+          <li class="menu-item" data-action="saved" id="menuSaved">
+            <i class="fa-regular fa-bookmark"></i>
+            <span>المحفوظات (Saved)</span>
+          </li>
+          <li class="menu-item" data-action="messenger">
+            <i class="fa-solid fa-comments"></i>
+            <span>Messenger الدردشة</span>
+          </li>
+          <li class="menu-item" data-action="explore">
+            <i class="fa-solid fa-compass"></i>
+            <span>استكشاف (Explore)</span>
+          </li>
+          <li class="menu-item" data-action="play">
+            <i class="fa-solid fa-gamepad"></i>
+            <span>Saepel Play</span>
+          </li>
+          <li class="menu-item" data-action="media">
+            <i class="fa-solid fa-photo-film"></i>
+            <span>مدير الوسائط</span>
+          </li>
+          <li class="menu-item" data-action="drafts">
+            <i class="fa-solid fa-file-pen"></i>
+            <span>المسودات (Drafts)</span>
+          </li>
+          <li class="menu-item" data-action="security">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>مركز الأمان</span>
+          </li>
+          <li class="menu-item" data-action="personalization">
+            <i class="fa-solid fa-palette"></i>
+            <span>التخصيص والمظهر</span>
+          </li>
+          <li class="menu-item" data-action="verification">
+            <i class="fa-solid fa-circle-check"></i>
+            <span>توثيق الحساب</span>
+          </li>
+          <li class="menu-item" data-action="points">
+            <i class="fa-solid fa-coins"></i>
+            <span>نقاط Saepel</span>
+          </li>
+          <li class="menu-item" data-action="settings">
+            <i class="fa-solid fa-gear"></i>
+            <span>الإعدادات</span>
+          </li>
+          <li class="menu-item menu-item-danger" data-action="logout">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>تسجيل الخروج</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ⭐⭐ Popup قائمة خيارات المنشور ⭐⭐ -->
+    <div class="post-menu-overlay" id="postMenuOverlay">
+      <div class="post-menu-modal">
+        <div class="post-menu-header">
+          <span>خيارات المنشور</span>
+          <button class="post-menu-close" id="postMenuCloseBtn">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="post-menu-options">
+          <!-- لصاحب المنشور فقط -->
+          <button class="post-menu-item owner-only" data-action="edit">
+            <i class="fa-regular fa-pen-to-square"></i>
+            <span>تعديل المنشور</span>
+          </button>
+
+          <button
+            class="post-menu-item owner-only danger"
+            data-action="delete"
+          >
+            <i class="fa-regular fa-trash-can"></i>
+            <span>حذف المنشور</span>
+          </button>
+
+          <!-- للجميع لكن تحتاج وسائط -->
+          <button
+            class="post-menu-item has-media"
+            data-action="downloadMedia"
+          >
+            <i class="fa-regular fa-circle-down"></i>
+            <span>تحميل الصورة / الفيديو</span>
+          </button>
+
+          <!-- للجميع -->
+          <button class="post-menu-item" data-action="copyLink">
+            <i class="fa-solid fa-link"></i>
+            <span>نسخ رابط المنشور</span>
+          </button>
+
+          <button class="post-menu-item" data-action="copyText">
+            <i class="fa-regular fa-copy"></i>
+            <span>نسخ نص المنشور</span>
+          </button>
+
+          <!-- لغير صاحب المنشور فقط -->
+          <button
+            class="post-menu-item not-owner-only"
+            data-action="report"
+          >
+            <i class="fa-regular fa-flag"></i>
+            <span>الإبلاغ عن هذا المنشور</span>
+          </button>
+
+          <button
+            class="post-menu-item not-owner-only"
+            data-action="hidePost"
+          >
+            <i class="fa-regular fa-eye-slash"></i>
+            <span>إخفاء هذا المنشور</span>
+          </button>
+
+          <button
+            class="post-menu-item not-owner-only"
+            data-action="unfollowUser"
+          >
+            <i class="fa-regular fa-user-xmark"></i>
+            <span>إلغاء متابعة صاحب المنشور</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⭐⭐ مودال تأكيد حذف المنشور ⭐⭐ -->
+    <div class="post-delete-overlay" id="postDeleteOverlay">
+      <div class="post-delete-modal">
+        <div class="post-delete-icon">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <h2 class="post-delete-title">حذف المنشور؟</h2>
+        <p class="post-delete-text">
+          لن تتمكن من استعادة هذا المنشور بعد حذفه. هل أنت متأكد؟
+        </p>
+        <div class="post-delete-actions">
+          <button
+            type="button"
+            class="post-delete-btn cancel"
+            id="cancelDeleteBtn"
+          >
+            إلغاء
+          </button>
+          <button
+            type="button"
+            class="post-delete-btn confirm"
+            id="confirmDeleteBtn"
+          >
+            نعم، احذف
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🔶 مودال تعديل المنشور -->
+    <div id="postEditOverlay" class="post-edit-overlay">
+      <div class="post-edit-modal">
+        <button type="button" id="postEditCloseBtn" class="post-edit-close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <h3 class="post-edit-title">تعديل المنشور ✏️</h3>
+
+        <form id="postEditForm" class="post-edit-form">
+          <label class="post-edit-label" for="postEditText">نص المنشور</label>
+          <textarea
+            id="postEditText"
+            class="post-edit-textarea"
+            rows="4"
+            placeholder="عدّل النص هنا..."
+          ></textarea>
+
+          <!-- 👇 اختيار الخصوصية (عام / خاص) -->
+          <label class="post-edit-label" for="postEditPrivacy">
+            خصوصية المنشور
+          </label>
+          <select id="postEditPrivacy" class="post-edit-select">
+            <option value="public">عام</option>
+            <option value="private">خاص</option>
+          </select>
+          <!-- 👆 -->
+
+          <label class="post-edit-label" for="postEditMediaInput">
+            تغيير الصورة / الفيديو (اختياري)
+          </label>
+          <input
+            type="file"
+            id="postEditMediaInput"
+            class="post-edit-file"
+            accept="image/*,video/*"
+          />
+
+          <div class="post-edit-actions">
+            <span
+              id="postEditSaving"
+              class="post-edit-saving"
+              style="display: none"
+              >جاري الحفظ...</span
+            >
+            <button type="submit" class="post-edit-submit">
+              حفظ التعديلات
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ⭐⭐ مودال الإبلاغ عن منشور ⭐⭐ -->
+    <div id="reportOverlay" class="report-overlay hidden">
+      <div class="report-box">
+        <!-- زر الإغلاق -->
+        <button
+          class="report-close"
+          id="reportCloseBtn"
+          type="button"
+          aria-label="إغلاق"
+        >
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <h3 class="report-title">الإبلاغ عن منشور</h3>
+        <p class="report-subtitle">
+          إذا كان هذا المنشور يخالف القواعد، اختر السبب وسنقوم بمراجعته.
+        </p>
+
+        <label for="reportReason" class="report-label">سبب الإبلاغ</label>
+        <select id="reportReason" class="report-select">
+          <option value="">اختر السبب…</option>
+          <option value="spam">سبام / محتوى مزعج</option>
+          <option value="hate">خطاب كراهية أو عنصرية</option>
+          <option value="sexual">محتوى جنسي أو غير لائق</option>
+          <option value="violence">عنف أو مشاهد مزعجة</option>
+          <option value="misinfo">معلومات مضلِّلة</option>
+          <option value="self-harm">تحريض على إيذاء النفس</option>
+          <option value="other">سبب آخر…</option>
+        </select>
+
+        <div id="reportOtherWrapper" class="report-other hidden">
+          <label for="reportOther" class="report-label">
+            اشرح المشكلة (اختياري)
+          </label>
+          <textarea
+            id="reportOther"
+            class="report-textarea"
+            rows="3"
+            placeholder="اكتب وصفًا مختصرًا للمشكلة…"
+          ></textarea>
+        </div>
+
+        <div class="report-actions">
+          <button
+            id="reportCancelBtn"
+            class="btn-report-cancel"
+            type="button"
+          >
+            إلغاء
+          </button>
+          <button
+            id="reportSubmitBtn"
+            class="btn-report-primary"
+            type="button"
+          >
+            <i class="fa-regular fa-paper-plane"></i>
+            <span>إرسال البلاغ</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- ⭐⭐ نهاية مودال الإبلاغ ⭐⭐ -->
+
+    <!-- ⭐⭐ عارض القصص (Story Viewer) ⭐⭐ -->
+    <div id="storyViewerOverlay" class="story-viewer-overlay">
+      <div class="story-viewer-shell">
+        <div class="story-viewer glass soft-shadow">
+          <!-- شريط التقدم -->
+          <div class="story-progress">
+            <div class="story-progress-bar" id="storyProgressBar"></div>
+          </div>
+
+          <!-- ترويسة العارض -->
+          <div class="story-viewer-header">
+            <div class="story-viewer-user">
+              <div class="story-viewer-avatar" id="storyViewerAvatar">S</div>
+              <div class="story-viewer-meta">
+                <span id="storyViewerName">اسم المستخدم</span>
+                <div class="story-viewer-sub">
+                  <span id="storyViewerTime" class="story-viewer-time">
+                    منذ 1 ساعة
+                  </span>
+                  <span id="storyViewerViews" class="story-viewer-views">
+                    👁‍🗨 0
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="story-viewer-actions">
+              <!-- ⭐ زر الإبلاغ عن القصة -->
+              <button
+                type="button"
+                class="story-icon-btn"
+                id="storyReportBtn"
+                title="الإبلاغ عن هذه القصة"
+              >
+                <i class="fa-regular fa-flag"></i>
+              </button>
+
+              <button
+                type="button"
+                class="story-icon-btn"
+                id="storyMuteBtn"
+                title="كتم الصوت"
+              >
+                <i class="fa-solid fa-volume-xmark"></i>
+              </button>
+              <button
+                type="button"
+                class="story-icon-btn"
+                id="storyCloseBtn"
+                title="إغلاق"
+              >
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- محتوى القصة -->
+          <div class="story-viewer-body">
+            <div class="story-viewer-media" id="storyViewerMedia">
+              <!-- يتم حقن الصورة/الفيديو من JS -->
+            </div>
+          </div>
+
+          <!-- تفاعل: ردود الفعل و الرد -->
+          <div class="story-viewer-interactions">
+            <div class="story-reactions">
+              <button class="reaction-btn" data-reaction="❤️">❤️</button>
+              <button class="reaction-btn" data-reaction="😂">😂</button>
+              <button class="reaction-btn" data-reaction="😮">😮</button>
+              <button class="reaction-btn" data-reaction="😢">😢</button>
+              <button class="reaction-btn" data-reaction="🔥">🔥</button>
+            </div>
+
+            <div class="story-reply-row">
+              <input
+                type="text"
+                id="storyReplyInput"
+                class="story-reply-input"
+                placeholder="اكتب رسالة سريعة لصاحب القصة…"
+              />
+              <button
+                type="button"
+                id="storyReplySendBtn"
+                class="story-reply-send"
+                title="إرسال"
+              >
+                <i class="fa-regular fa-paper-plane"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- أزرار التنقل -->
+          <div class="story-viewer-footer">
+            <button
+              type="button"
+              class="story-nav-btn"
+              id="storyPrevBtn"
+              title="السابق"
+            >
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
+            <button
+              type="button"
+              class="story-nav-btn"
+              id="storyNextBtn"
+              title="التالي"
+            >
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+          </div>
+
+          <!-- ✅ شريط أكشن للستوري (مشاهدات / حذف / إبلاغ / كتم مستخدم) -->
+          <div class="story-footer-actions">
+            <button class="sf-views-btn" id="sfViewsBtn" type="button">
+              <i class="fa-regular fa-eye"></i>
+              <span id="sfViewsCount">0</span>
+              <span>مشاهدة</span>
+            </button>
+
+            <div class="sf-actions-right">
+              <button
+                class="sf-icon-btn"
+                id="sfMuteBtn"
+                type="button"
+                title="كتم هذا المستخدم"
+              >
+                <i class="fa-solid fa-bell-slash"></i>
+              </button>
+              <button
+                class="sf-icon-btn sf-danger"
+                id="sfReportBtn"
+                type="button"
+                title="الإبلاغ عن هذه القصة"
+              >
+                <i class="fa-regular fa-flag"></i>
+              </button>
+              <button
+                class="sf-icon-btn sf-danger"
+                id="sfDeleteBtn"
+                type="button"
+                title="حذف القصة"
+              >
+                <i class="fa-regular fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- ✅ لوحة المشاهدات -->
+          <div class="story-views-panel" id="sfViewsPanel">
+            <div class="sf-views-header">
+              <span>المشاهدات</span>
+              <button id="sfViewsClose" type="button">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <div class="sf-views-list" id="sfViewsList">
+              <!-- يتم تعبئتها من JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ⭐⭐ نهاية عارض القصص ⭐⭐ -->
+
+    <!-- ✅ Toast للإشعارات الأنيقة -->
+    <div id="saeToast" class="sae-toast"></div>
+
+    <!-- ملف الجافاسكربت الرئيسي -->
     <script src="assets/js/app.js"></script>
+    <!-- ⭐ ملف جافاسكربت لقائمة الثلاث نقاط -->
+    <script src="assets/js/postMenu.js"></script>
+    <!-- ⭐ ملف جافاسكربت للقصص -->
+    <script src="assets/js/stories.js"></script>
 
-    <!-- سكربت بسيط لجلب البروفايل وملء البيانات -->
+    <!-- جافاسكربت بسيط للقائمة + تطبيق المظهر المحفوظ -->
     <script>
-      // جلب بيانات المستخدم الحالي من /api/profile
-      async function loadCurrentUserProfile() {
-        let token =
-          localStorage.getItem("token") || localStorage.getItem("authToken");
+      const APPEARANCE_KEY = "saepelAppearance";
 
-        if (!token) return;
-
+      (function applyAppearanceFromStorage() {
         try {
-          const res = await fetch("/api/profile", {
-            headers: {
-              Authorization: "Bearer " + token,
-            },
-          });
-
-          if (!res.ok) return;
-
-          const data = await res.json();
-
-          // ملء الهيدر
-          const navUserName = document.getElementById("navUserName");
-          const navUserAvatar = document.getElementById("navUserAvatar");
-
-          if (navUserName) navUserName.textContent = data.username || "مستخدم";
-          if (navUserAvatar && data.avatar) navUserAvatar.src = data.avatar;
-
-          // ملء السايدبار
-          const sideUserName = document.getElementById("sideUserName");
-          const sideUserEmail = document.getElementById("sideUserEmail");
-          const sideUserAvatar = document.getElementById("sideUserAvatar");
-
-          if (sideUserName) sideUserName.textContent = data.username || "";
-          if (sideUserEmail) sideUserEmail.textContent = data.email || "";
-          if (sideUserAvatar && data.avatar) sideUserAvatar.src = data.avatar;
-
-          // رسالة الترحيب
-          const welcome = document.getElementById("welcomeUser");
-          if (welcome) {
-            welcome.textContent = "مرحباً 👋 " + (data.username || "");
-          }
-        } catch (err) {
-          console.error("Error loading profile in index:", err);
+          const raw = localStorage.getItem(APPEARANCE_KEY);
+          if (!raw) return;
+          const s = JSON.parse(raw);
+          document.documentElement.classList.toggle("theme-dark", !!s.dark);
+          document.body.classList.toggle("body-compact", !!s.compact);
+          document.body.classList.toggle("soft-anim", !!s.anim);
+        } catch (e) {
+          console.warn("cannot apply appearance", e);
         }
+      })();
+
+      const mainMenuBtn = document.getElementById("mainMenuBtn");
+      const sideMenu = document.getElementById("sideMenu");
+      const closeMenuBtn = document.getElementById("closeMenuBtn");
+      const menuItems = document.querySelectorAll(".menu-item");
+
+      // ✅ زر الرسائل في الهيدر
+      const topMessagesBtn = document.getElementById("topMessagesBtn");
+      if (topMessagesBtn) {
+        topMessagesBtn.addEventListener("click", () => {
+          window.location.href = "inbox.html";
+        });
       }
 
-      loadCurrentUserProfile();
+      if (mainMenuBtn && sideMenu && closeMenuBtn) {
+        mainMenuBtn.addEventListener("click", () => {
+          sideMenu.classList.add("active");
+        });
+
+        closeMenuBtn.addEventListener("click", () => {
+          sideMenu.classList.remove("active");
+        });
+
+        sideMenu.addEventListener("click", (e) => {
+          if (e.target === sideMenu) {
+            sideMenu.classList.remove("active");
+          }
+        });
+      }
+
+      menuItems.forEach((item) => {
+        item.addEventListener("click", async () => {
+          const action = item.dataset.action;
+
+          switch (action) {
+            case "profile":
+              window.location.href = "profile.html";
+              break;
+
+            case "saved":
+              // عرض المحفوظات داخل نفس الصفحة بدل فتح صفحة جديدة
+              if (typeof fetchSavedPostIds === "function") {
+                try {
+                  await fetchSavedPostIds();
+                  if (typeof loadSavedPosts === "function") {
+                    await loadSavedPosts();
+                  }
+                  if (typeof showToast === "function") {
+                    showToast("تم عرض المحفوظات 📌", "success");
+                  }
+                } catch (e) {
+                  console.error(e);
+                  if (typeof showToast === "function") {
+                    showToast("تعذر تحميل المحفوظات", "error");
+                  }
+                }
+              }
+              break;
+
+            case "personalization":
+              window.location.href = "appearance.html";
+              break;
+
+            case "messenger":
+              // ✅ افتح صفحة الرسائل
+              window.location.href = "inbox.html";
+              break;
+
+            case "logout":
+              localStorage.removeItem("token");
+              localStorage.removeItem("user");
+              if (typeof showToast === "function") {
+                showToast("تم تسجيل الخروج بنجاح ✅", "success");
+                setTimeout(() => {
+                  window.location.href = "login.html";
+                }, 800);
+              } else {
+                window.location.href = "login.html";
+              }
+              break;
+
+            default:
+              if (typeof showToast === "function") {
+                showToast("هذه الميزة قيد التطوير في Saepel 🔧");
+              }
+              break;
+          }
+
+          sideMenu.classList.remove("active");
+        });
+      });
     </script>
   </body>
 </html>

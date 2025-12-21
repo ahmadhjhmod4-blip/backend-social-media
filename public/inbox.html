@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Saepel - الرسائل</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+
+    <!-- Global styles -->
+    <link rel="stylesheet" href="assets/css/style.css" />
+
+    <!-- Inbox styles -->
+    <link rel="stylesheet" href="assets/css/inbox.css" />
+  
+    <style>
+      /* Composer text visibility fix (Channels/Groups) */
+      /* Ensures typed text is always readable regardless of tab/theme */
+      .chat-input, #chatInput, .chat-input input, .chat-input textarea, textarea#chatInput, input#chatInput {
+        color: rgba(15, 23, 42, .92);
+        caret-color: rgba(79, 70, 229, .95);
+      }
+      .chat-input::placeholder, #chatInput::placeholder, .chat-input input::placeholder, .chat-input textarea::placeholder {
+        color: rgba(15, 23, 42, .45);
+      }
+      body[data-theme="dark"] .chat-input,
+      body[data-theme="dark"] #chatInput,
+      body[data-theme="dark"] .chat-input input,
+      body[data-theme="dark"] .chat-input textarea,
+      body[data-theme="dark"] textarea#chatInput,
+      body[data-theme="dark"] input#chatInput {
+        color: rgba(255, 255, 255, .92);
+        caret-color: rgba(129, 140, 248, .95);
+      }
+      body[data-theme="dark"] .chat-input::placeholder,
+      body[data-theme="dark"] #chatInput::placeholder,
+      body[data-theme="dark"] .chat-input input::placeholder,
+      body[data-theme="dark"] .chat-input textarea::placeholder {
+        color: rgba(255, 255, 255, .45);
+      }
+
+      /* If you mark channels/groups via body classes, keep it readable too */
+      body.is-channel .chat-input, body.is-channel #chatInput,
+      body.is-group .chat-input, body.is-group #chatInput {
+        color: inherit;
+      }
+    </style>
+
+
+    <style>
+      /* Quick actions (Channels / Groups) — light glass, compact */
+      .space-quick-actions{margin:10px 12px;padding:10px;border-radius:18px}
+      .space-quick-actions .sqa-row{display:flex;gap:10px}
+      .space-quick-actions .sqa-btn{
+        flex:1;display:flex;align-items:center;justify-content:center;gap:8px;
+        padding:10px 12px;border-radius:14px;border:1px solid rgba(0,0,0,.08);
+        background:rgba(255,255,255,.55);cursor:pointer;font-size:12px;font-weight:700
+      }
+      body[data-theme="dark"] .space-quick-actions .sqa-btn{
+        border-color:rgba(255,255,255,.14);background:rgba(255,255,255,.08)
+      }
+      .space-quick-actions .sqa-btn.primary{
+        border-color:rgba(79,70,229,.25);
+        box-shadow:0 8px 24px rgba(79,70,229,.10)
+      }
+      .space-quick-actions .sqa-btn:disabled{opacity:.45;cursor:not-allowed}
+      .space-quick-actions.hidden, .sqa-row.hidden{display:none}
+    </style>
+
+</head>
+
+  <body>
+    <!-- Background orbs -->
+    <div class="bg-orbs">
+      <div class="bg-orb orb-1"></div>
+      <div class="bg-orb orb-2"></div>
+      <div class="bg-orb orb-3"></div>
+    </div>
+
+    <div class="inbox-page">
+      <!-- ===== Sidebar ===== -->
+      <aside class="inbox-sidebar">
+        <header class="inbox-header glassy">
+          <div class="inbox-title">
+            <div class="inbox-icon">
+              <i class="fa-solid fa-message"></i>
+            </div>
+            <div>
+              <h1><span data-i18n="sidebar.title">الرسائل</span></h1>
+              <p data-i18n="sidebar.subtitle">تواصل سريع وسلس داخل Saepel</p>
+            </div>
+          </div>
+
+          <div class="inbox-header-actions">
+            <button
+              class="new-chat-btn"
+              id="newChatBtn"
+              type="button"
+              title="محادثة جديدة"
+              data-i18n-title="sidebar.newChat"
+            >
+              <i class="fa-solid fa-plus"></i>
+            </button>
+
+            <button
+              class="theme-toggle-btn"
+              id="themeToggleBtn"
+              type="button"
+              title="تبديل الثيم"
+              data-i18n-title="sidebar.toggleTheme"
+              aria-label="تبديل الثيم"
+            >
+              <i class="fa-solid fa-sun"></i>
+            </button>
+          </div>
+        </header>
+
+        <!-- Search -->
+        <div class="inbox-search glassy">
+          <button
+            class="filter-btn"
+            id="filterBtn"
+            type="button"
+            title="فلترة"
+            data-i18n-title="sidebar.filter"
+          >
+            <i class="fa-solid fa-sliders"></i>
+          </button>
+
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="بحث في المحادثات..."
+            data-i18n-placeholder="sidebar.searchPlaceholder"
+          />
+          <i class="fa-solid fa-magnifying-glass"></i>
+        </div>
+
+        <!-- Tabs (Front-only) -->
+        <nav class="inbox-tabs glassy" id="inboxTabs" aria-label="تبويبات الرسائل">
+          <button type="button" class="tab-btn active" data-tab="chat" aria-selected="true">
+            <span class="tab-label" data-i18n="tabs.chats">Chats</span>
+            <span class="tab-count hidden" aria-hidden="true">0</span>
+          </button>
+          <button type="button" class="tab-btn" data-tab="group" aria-selected="false">
+            <span class="tab-label" data-i18n="tabs.groups">Groups</span>
+            <span class="tab-count hidden" aria-hidden="true">0</span>
+          </button>
+          <button type="button" class="tab-btn" data-tab="channel" aria-selected="false">
+            <span class="tab-label" data-i18n="tabs.channels">Channels</span>
+            <span class="tab-count hidden" aria-hidden="true">0</span>
+          </button>
+          <button type="button" class="tab-btn" data-tab="calls" aria-selected="false">
+            <span class="tab-label" data-i18n="tabs.calls">Calls</span>
+            <span class="tab-count hidden" aria-hidden="true">0</span>
+          </button>
+        </nav>
+
+        <!-- Quick actions per tab (Channels / Groups) -->
+        <div class="space-quick-actions glassy" id="spaceQuickActions" style="display:none">
+          <!-- Channels actions -->
+          <div class="sqa-row hidden" id="channelQuickActions" data-kind="channel">
+            <button type="button" class="sqa-btn primary" id="createChannelBtn" title="إنشاء قناة">
+              <i class="fa-solid fa-bullhorn"></i>
+              <span>إنشاء قناة</span>
+            </button>
+            <button type="button" class="sqa-btn" id="manageChannelBtn" title="إدارة القناة (قريباً)" disabled>
+              <i class="fa-solid fa-gear"></i>
+              <span>إدارة</span>
+            </button>
+          </div>
+
+          <!-- Groups actions -->
+          <div class="sqa-row hidden" id="groupQuickActions" data-kind="group">
+            <button type="button" class="sqa-btn primary" id="createGroupBtn" title="إنشاء مجموعة">
+              <i class="fa-solid fa-users"></i>
+              <span>إنشاء مجموعة</span>
+            </button>
+            <button type="button" class="sqa-btn" id="manageGroupBtn" title="إدارة المجموعة (قريباً)" disabled>
+              <i class="fa-solid fa-gear"></i>
+              <span>إدارة</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Empty State (dynamic) -->
+        <div class="inbox-empty-state glassy" id="inboxEmptyState" style="display:none">
+          <div class="ies-ico"><i class="fa-regular fa-comment-dots"></i></div>
+          <div class="ies-title" data-i18n="empty.genericTitle">لا يوجد عناصر هنا</div>
+          <div class="ies-sub" data-i18n="empty.genericSub">ابدأ محادثة جديدة أو غيّر التبويب</div>
+        </div>
+
+        <!-- Calls panel -->
+        <div class="calls-panel" id="callsPanel" style="display:none">
+          <div id="callsEmpty" class="empty-state-calls glassy hidden">
+            <div class="ies-ico"><i class="fa-solid fa-phone"></i></div>
+            <div class="ies-title" data-i18n="calls.emptyTitle">لا يوجد سجل اتصالات</div>
+            <div class="ies-sub" data-i18n="calls.emptySub">المكالمات الواردة والصادرة ستظهر هنا</div>
+          </div>
+
+          <div id="callsList" class="calls-list"></div>
+        </div>
+
+        <!-- Conversations list -->
+        <div class="conversation-list" id="conversationList" data-filter="chat">
+          <!-- Demo: Conversation 1 -->
+          <button
+            class="conversation-item active"
+            data-type="chat"
+            data-name="محمد أحمد"
+            data-status="متصل الآن"
+            data-user-id="mock-user-1"
+            type="button"
+          >
+            <div class="conv-avatar">
+              <img src="https://i.pravatar.cc/150?img=12" alt="Avatar" />
+              <span class="status-dot online"></span>
+            </div>
+            <div class="conv-main">
+              <div class="conv-row-top">
+                <span class="conv-name">محمد أحمد</span>
+                <span class="conv-time">منذ 2 دقيقة</span>
+              </div>
+              <div class="conv-row-bottom">
+                <span class="conv-last-msg">جاهز نكمّل شغل بكرة؟ 👀</span>
+                <span class="conv-unread-badge">3</span>
+              </div>
+            </div>
+          </button>
+
+          <!-- Demo: Conversation 2 -->
+          <button
+            class="conversation-item"
+            data-type="chat"
+            data-name="سارة علي"
+            data-status="آخر ظهور قبل ساعة"
+            data-user-id="mock-user-2"
+            type="button"
+          >
+            <div class="conv-avatar">
+              <img src="https://i.pravatar.cc/150?img=32" alt="Avatar" />
+              <span class="status-dot offline"></span>
+            </div>
+            <div class="conv-main">
+              <div class="conv-row-top">
+                <span class="conv-name">سارة علي</span>
+                <span class="conv-time">قبل 30 دقيقة</span>
+              </div>
+              <div class="conv-row-bottom">
+                <span class="conv-last-msg">شفت تصميم Saepel الجديد ✨</span>
+              </div>
+            </div>
+          </button>
+
+          <!-- Demo: Conversation 3 -->
+          <button
+            class="conversation-item"
+            data-type="group"
+            data-name="فريق Saepel"
+            data-status="مجموعة • نشط"
+            data-user-id="mock-group-1"
+            type="button"
+          >
+            <div class="conv-avatar">
+              <div class="conv-group-avatar">
+                <i class="fa-solid fa-users"></i>
+              </div>
+              <span class="status-dot online"></span>
+            </div>
+            <div class="conv-main">
+              <div class="conv-row-top">
+                <span class="conv-name">فريق Saepel</span>
+                <span class="conv-time">أمس</span>
+              </div>
+              <div class="conv-row-bottom">
+                <span class="conv-last-msg">تم نشر تحديث جديد للنظام ✅</span>
+                <span class="conv-unread-badge">8</span>
+              </div>
+            </div>
+          </button>
+        </div>
+      </aside>
+
+      <!-- ===== Chat ===== -->
+      <main class="inbox-chat">
+        <!-- Header -->
+        <header class="chat-header glassy">
+          <!-- Back (mobile) -->
+          <button class="chat-back-btn" id="chatBackBtn" type="button" title="رجوع للقائمة">
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+
+          <!-- User info -->
+          <div class="chat-user-info" id="chatUserInfo">
+            <div class="chat-avatar">
+              <img src="https://i.pravatar.cc/150?img=12" alt="Avatar" id="chatUserAvatar" />
+            </div>
+            <div class="chat-user-text">
+              <div class="chat-user-name" id="chatUserName">محمد أحمد</div>
+              <div class="chat-user-status" id="chatUserStatus">متصل الآن • تجربة واجهة Saepel</div>
+              <div class="space-badges" id="spaceBadges" style="display:none">
+                <span class="space-badge role" id="channelRoleBadge" title="دورك في القناة" style="display:none">
+                  <i class="fa-solid fa-shield-halved"></i>
+                  <span class="lbl">مشرف</span>
+                </span>
+                <span class="space-badge members" id="channelSubsBadge" title="عدد المشتركين" style="display:none">
+                  <i class="fa-solid fa-users"></i>
+                  <span class="lbl" id="channelSubsCount">0</span>
+                </span>
+              </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="chat-actions">
+            <button class="chat-icon-btn chat-exit-btn" id="chatExitBtn" type="button" title="العودة للرئيسية">
+              <i class="fa-solid fa-arrow-left-long"></i>
+            </button>
+
+            <button class="chat-icon-btn" id="audioCallBtn" type="button" title="مكالمة صوتية">
+              <i class="fa-solid fa-phone"></i>
+            </button>
+
+            <button class="chat-icon-btn" id="videoCallBtn" type="button" title="مكالمة فيديو">
+              <i class="fa-solid fa-video"></i>
+            </button>
+
+            <button class="chat-icon-btn" id="chatMoreBtn" type="button" title="خيارات المحادثة">
+              <i class="fa-solid fa-ellipsis-vertical"></i>
+            </button>
+
+            <div class="chat-options-menu" id="chatOptionsMenu" style="right:0; left:auto">
+              <button class="chat-options-item" data-action="view-profile" type="button">
+                <i class="fa-regular fa-user"></i>
+                عرض الملف الشخصي
+              </button>
+              <button class="chat-options-item" data-action="mute" type="button">
+                <i class="fa-regular fa-bell-slash"></i>
+                كتم المحادثة
+              </button>
+              <button class="chat-options-item" data-action="clear-chat" type="button">
+                <i class="fa-regular fa-trash-can"></i>
+                مسح محتوى المحادثة
+              </button>
+              <button class="chat-options-item" data-action="block" type="button">
+                <i class="fa-regular fa-circle-xmark"></i>
+                حظر المستخدم
+              </button>
+              <button class="chat-options-item" data-action="report" type="button">
+                <i class="fa-regular fa-flag"></i>
+                الإبلاغ عن المستخدم
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <!-- Messages -->
+        <section class="chat-messages" id="chatMessages">
+          <div class="channel-notice" id="channelNotice" style="display:none">
+            <i class="fa-solid fa-bullhorn"></i>
+            <div class="cn-text">
+              <div class="cn-title">هذه قناة</div>
+              <div class="cn-sub">النشر متاح للمشرفين فقط. يمكنك الاشتراك أو كتم القناة من الأسفل.</div>
+            </div>
+          </div>
+
+          <div class="msg-row them">
+            <div class="msg-bubble">
+              <p>مرحبا 👋 كيف شايف سرعة Saepel عندك؟</p>
+              <div class="msg-meta">
+                <span class="msg-time">20:15</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="msg-row me">
+            <div class="msg-bubble">
+              <p>سريعة وسلسة حتى مع النت الضعيف 🔥</p>
+              <div class="msg-meta">
+                <span class="msg-time">20:16</span>
+                <span class="msg-state"><i class="fa-solid fa-check-double"></i></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Typing indicator (required by JS) -->
+          <div id="typingIndicator" class="typing-indicator" style="display:none">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="text">يكتب الآن...</span>
+          </div>
+        </section>
+
+        <!-- Composer -->
+        <footer class="chat-input-bar glassy" id="chatInputBar">
+          <div class="composer-default" id="composerDefault">
+            <button class="chat-main-action-btn" id="chatActionsToggle" type="button" title="المزيد من الخيارات">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+
+            <div class="chat-input-wrapper">
+              <button class="chat-emoji-btn" id="chatEmojiBtn" type="button" title="إيموجي / ملصقات" aria-label="إيموجي / ملصقات">
+                <i class="fa-regular fa-face-smile"></i>
+              </button>
+              <textarea id="chatInput" class="chat-message-input" rows="1" placeholder="اكتب رسالة..."></textarea>
+            </div>
+
+            <button class="chat-send-btn" id="chatSendBtn" type="button" title="إرسال">
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+
+            <button class="chat-mic-btn" id="chatMicBtn" type="button" title="رسالة صوتية">
+              <i class="fa-solid fa-microphone"></i>
+            </button>
+
+            <!-- Actions popover -->
+            <div class="chat-actions-menu" id="chatActionsMenu" aria-hidden="true">
+              <button type="button" class="cam-item" data-action="image" title="صورة / فيديو">
+                <i class="fa-regular fa-image"></i>
+                <span class="chat-action-label">صورة / فيديو</span>
+              </button>
+              <button type="button" class="cam-item" data-action="camera" title="كاميرا">
+                <i class="fa-solid fa-camera"></i>
+                <span class="chat-action-label">كاميرا</span>
+              </button>
+              <button type="button" class="cam-item" data-action="file" title="ملف">
+                <i class="fa-regular fa-file"></i>
+                <span class="chat-action-label">ملف</span>
+              </button>
+              <button type="button" class="cam-item" data-action="emoji" title="إيموجي">
+                <i class="fa-regular fa-face-smile"></i>
+                <span class="chat-action-label">إيموجي</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Channel gate: يظهر فقط في القنوات لغير المشرفين -->
+          <div class="composer-channel-gate" id="composerChannelGate" style="display:none" aria-live="polite">
+            <button class="ccg-btn primary" id="channelSubscribeBtn" type="button">
+              <i class="fa-solid fa-bell"></i>
+              اشتراك
+            </button>
+            <button class="ccg-btn" id="channelMuteBtn" type="button" style="display:none">
+              <i class="fa-regular fa-bell-slash"></i>
+              <span class="lbl">كتم</span>
+            </button>
+          </div>
+</footer>
+      </main>
+    </div>
+
+    <!-- Socket.io -->
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+
+    <!-- Inbox script -->
+    <script src="assets/js/inbox.js"></script>
+    <script src="assets/js/inbox.channels.js"></script>
+<script src="assets/js/inbox.groups.js"></script>
+
+
+    <!-- Media Viewer -->
+    <div id="mediaViewerOverlay" class="media-viewer-overlay" aria-hidden="true">
+      <div class="media-viewer" role="dialog" aria-modal="true" aria-label="عارض الوسائط">
+        <div class="mv-top">
+          <button id="mediaViewerCloseBtn" class="mv-btn mv-close" type="button" aria-label="إغلاق">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+
+          <div id="mediaViewerTitle" class="mv-title"></div>
+
+          <div class="mv-actions">
+            <a id="mediaViewerOpenBtn" class="mv-btn" target="_blank" rel="noopener">فتح</a>
+            <button id="mediaViewerDownloadBtn" class="mv-btn" type="button">حفظ</button>
+          </div>
+        </div>
+
+        <div id="mediaViewerContent" class="mv-content"></div>
+        <div class="mv-hint">تلميح: عجلة الماوس للتقريب، واسحب للتحريك</div>
+      </div>
+    </div>
+
+    <!-- Calls Overlay -->
+    <div id="callOverlay" class="call-overlay" aria-hidden="true">
+      <div class="call-sheet glassy" role="dialog" aria-modal="true" aria-label="مكالمة">
+        <div class="call-top">
+          <div class="call-badge" id="callTypeBadge" aria-hidden="true"><i class="fa-solid fa-phone"></i></div>
+
+          <div class="call-head">
+            <div class="call-title" id="callTitle">مكالمة</div>
+            <div class="call-sub" id="callSub">...</div>
+          </div>
+
+          <button type="button" class="call-close" id="callCloseBtn" aria-label="إغلاق">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="call-peer">
+          <div class="call-avatar" id="callPeerAvatar">
+            <img id="callPeerAvatarImg" alt="Avatar" />
+          </div>
+          <div class="call-peer-meta">
+            <div class="call-peer-name" id="callPeerName">مستخدم</div>
+            <div class="call-peer-status" id="callPeerStatus">—</div>
+          </div>
+        </div>
+
+        <div class="call-timer-row">
+          <div class="call-timer" id="callTimer" style="display:none">00:00</div>
+          <div class="call-hint" id="callHint">Signaling فقط — لا يوجد صوت/فيديو بعد</div>
+        </div>
+
+        <div class="call-controls" id="callControls" style="display:none">
+          <button type="button" class="call-ctrl" id="callMuteBtn" aria-pressed="false" title="كتم">
+            <i class="fa-solid fa-microphone-slash"></i><span>كتم</span>
+          </button>
+          <button type="button" class="call-ctrl" id="callSpeakerBtn" aria-pressed="false" title="مكبر">
+            <i class="fa-solid fa-volume-high"></i><span>مكبر</span>
+          </button>
+          <button type="button" class="call-ctrl" id="callFullscreenBtn" aria-pressed="false" title="ملء الشاشة">
+            <i class="fa-solid fa-expand"></i><span>تكبير</span>
+          </button>
+          <button type="button" class="call-ctrl" id="callCamBtn" aria-pressed="false" title="كاميرا">
+            <i class="fa-solid fa-video"></i><span>كاميرا</span>
+          </button>
+        </div>
+
+        <div class="call-actions">
+          <button type="button" class="call-btn secondary" id="callCancelBtn" style="display:none">
+            <i class="fa-solid fa-ban"></i>إلغاء
+          </button>
+          <button type="button" class="call-btn danger" id="callRejectBtn" style="display:none">
+            <i class="fa-solid fa-xmark"></i>رفض
+          </button>
+          <button type="button" class="call-btn ok" id="callAcceptBtn" style="display:none">
+            <i class="fa-solid fa-check"></i>قبول
+          </button>
+          <button type="button" class="call-btn danger" id="callEndBtn" style="display:none">
+            <i class="fa-solid fa-phone-slash"></i>إنهاء
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- i18n (device language + RTL/LTR) -->
+    <script>
+      (function () {
+        const raw = (navigator.languages && navigator.languages[0]) || navigator.language || "en";
+        const lang = String(raw).toLowerCase();
+
+        const RTL = ["ar", "he", "fa", "ur"];
+        const base = lang.split("-")[0];
+        const isRTL = RTL.includes(base);
+
+        document.documentElement.lang = base || "en";
+        document.documentElement.dir = isRTL ? "rtl" : "ltr";
+
+        const I18N = {
+          en: {
+            sidebar: {
+              title: "Messages",
+              subtitle: "Fast, smooth chat inside Saepel",
+              searchPlaceholder: "Search conversations...",
+              newChat: "New chat",
+              toggleTheme: "Toggle theme",
+              filter: "Filter",
+            },
+            tabs: { chats: "Chats", groups: "Groups", channels: "Channels", calls: "Calls" },
+            empty: { genericTitle: "Nothing here yet", genericSub: "Start a new chat or change the tab" },
+            calls: { emptyTitle: "No call log", emptySub: "Incoming and outgoing calls will appear here" },
+          },
+          ar: {
+            sidebar: {
+              title: "الرسائل",
+              subtitle: "تواصل سريع وسلس داخل Saepel",
+              searchPlaceholder: "بحث في المحادثات...",
+              newChat: "محادثة جديدة",
+              toggleTheme: "تبديل الثيم",
+              filter: "فلترة",
+            },
+            tabs: { chats: "المحادثات", groups: "المجموعات", channels: "القنوات", calls: "المكالمات" },
+            empty: { genericTitle: "لا يوجد عناصر هنا", genericSub: "ابدأ محادثة جديدة أو غيّر التبويب" },
+            calls: { emptyTitle: "لا يوجد سجل اتصالات", emptySub: "المكالمات الواردة والصادرة ستظهر هنا" },
+          },
+        };
+
+        const dict = I18N[base] || I18N.en;
+
+        document.querySelectorAll("[data-i18n]").forEach((el) => {
+          const key = el.getAttribute("data-i18n");
+          const val = key.split(".").reduce((o, k) => (o ? o[k] : undefined), dict);
+          if (typeof val === "string") el.textContent = val;
+        });
+
+        document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+          const key = el.getAttribute("data-i18n-placeholder");
+          const val = key.split(".").reduce((o, k) => (o ? o[k] : undefined), dict);
+          if (typeof val === "string") el.setAttribute("placeholder", val);
+        });
+
+        document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+          const key = el.getAttribute("data-i18n-title");
+          const val = key.split(".").reduce((o, k) => (o ? o[k] : undefined), dict);
+          if (typeof val === "string") {
+            el.setAttribute("title", val);
+            if (el.hasAttribute("aria-label")) el.setAttribute("aria-label", val);
+          }
+        });
+      })();
+    </script>
+    <!-- ===== Space Wizard Overlay (Groups / Channels) ===== -->
+  <div id="spaceWizardOverlay" class="space-wizard-overlay" aria-hidden="true"></div>
+
+    <script>
+      // UI-only: show quick actions for Channels/Groups depending on the active tab (core logic stays in inbox.js)
+      (function () {
+        const qa = document.getElementById("spaceQuickActions");
+        const ch = document.getElementById("channelQuickActions");
+        const gr = document.getElementById("groupQuickActions");
+        if (!qa || !ch || !gr) return;
+
+        function show(kind) {
+          const k = String(kind || "").toLowerCase();
+          const isCh = (k === "channel" || k === "channels");
+          const isGr = (k === "group" || k === "groups");
+          qa.style.display = (isCh || isGr) ? "" : "none";
+          ch.classList.toggle("hidden", !isCh);
+          gr.classList.toggle("hidden", !isGr);
+        }
+
+        // initial (from localStorage used by inbox.js)
+        try {
+          const saved = localStorage.getItem("saepel_inbox_filter") || "chats";
+          show(saved);
+        } catch {}
+
+        // when user changes tab (inbox.js should dispatch this event)
+        window.addEventListener("saepel:sidebar:tab", (e) => {
+          show(e?.detail);
+        });
+
+        // fallback: if inbox.js doesn't dispatch, watch clicks on tab buttons
+        document.addEventListener("click", (e) => {
+          const btn = e.target.closest?.(".inbox-tabs .tab-btn");
+          if (!btn) return;
+          const tab = btn.getAttribute("data-tab");
+          show(tab);
+        });
+      })();
+    </script>
+
+</body>
+</html>

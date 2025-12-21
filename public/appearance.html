@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Saepel - التخصيص والمظهر</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- أيقونات -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+
+    <!-- التصميم الأساسي للموقع -->
+    <link rel="stylesheet" href="assets/css/style.css" />
+
+    <!-- ستايل بسيط خاص بصفحة التخصيص -->
+    <style>
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px 12px;
+      }
+
+      .appearance-wrapper {
+        width: 100%;
+        max-width: 480px;
+        z-index: 1;
+      }
+
+      .appearance-card {
+        padding: 16px 16px 18px;
+        border-radius: 22px;
+      }
+
+      .appearance-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 6px;
+      }
+
+      .appearance-title {
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      .appearance-subtitle {
+        font-size: 12px;
+        opacity: 0.8;
+        margin-bottom: 10px;
+      }
+
+      .appearance-subtitle span {
+        color: #a5b4fc;
+      }
+
+      .appearance-close {
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        background: rgba(3, 7, 18, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .feature-box {
+        margin-top: 8px;
+        padding: 10px 10px 12px;
+        border-radius: 18px;
+        background: rgba(15, 23, 42, 0.9);
+      }
+
+      .feature-box-title {
+        font-size: 12px;
+        opacity: 0.9;
+        margin-bottom: 8px;
+      }
+
+      .feature-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .feature-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 16px;
+        background: rgba(15, 23, 42, 0.9);
+      }
+
+      .feature-main {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .feature-icon {
+        width: 26px;
+        height: 26px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(
+          circle at top left,
+          rgba(148, 163, 253, 0.9),
+          rgba(56, 189, 248, 0.9)
+        );
+        font-size: 14px;
+      }
+
+      .feature-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .feature-title {
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .feature-desc {
+        font-size: 11px;
+        opacity: 0.7;
+      }
+
+      /* سويتش التفعيل */
+      .toggle {
+        position: relative;
+        width: 44px;
+        height: 24px;
+      }
+
+      .toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.7);
+        transition: 0.18s;
+      }
+
+      .toggle-slider::before {
+        content: "";
+        position: absolute;
+        height: 18px;
+        width: 18px;
+        border-radius: 999px;
+        background: #ffffff;
+        top: 3px;
+        right: 3px;
+        transition: 0.18s;
+      }
+
+      .toggle input:checked + .toggle-slider {
+        background: linear-gradient(135deg, #6e4aff, #00d1ff);
+      }
+
+      .toggle input:checked + .toggle-slider::before {
+        transform: translateX(-18px);
+      }
+
+      .appearance-footer {
+        margin-top: 12px;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .appearance-save-btn {
+        padding: 7px 16px;
+        border-radius: 999px;
+        border: none;
+        background: linear-gradient(135deg, #8b5cf6, #ec4899);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .appearance-save-btn i {
+        font-size: 14px;
+      }
+
+      @media (max-width: 599px) {
+        body {
+          align-items: flex-start;
+          padding-top: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- خلفية orbs -->
+    <div class="bg-orbs">
+      <div class="bg-orb orb-1"></div>
+      <div class="bg-orb orb-2"></div>
+      <div class="bg-orb orb-3"></div>
+    </div>
+
+    <div class="appearance-wrapper">
+      <div class="glass soft-shadow appearance-card">
+        <div class="appearance-header">
+          <div>
+            <div class="appearance-title">التخصيص والمظهر</div>
+            <div class="appearance-subtitle">
+              عدّل شكل <span>Saepel-Next</span> كما يناسبك ✨
+            </div>
+          </div>
+
+          <!-- رجوع للرئيسية -->
+          <button
+            type="button"
+            class="appearance-close"
+            onclick="window.location.href='index.html'"
+            title="العودة للرئيسية"
+          >
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="feature-box">
+          <div class="feature-box-title">قائمة الميزات:</div>
+
+          <div class="feature-list">
+            <!-- الوضع الليلي -->
+            <div class="feature-row">
+              <div class="feature-main">
+                <div class="feature-icon">
+                  <i class="fa-solid fa-moon"></i>
+                </div>
+                <div class="feature-text">
+                  <div class="feature-title">الوضع الليلي</div>
+                  <div class="feature-desc">واجهة داكنة مريحة للعين.</div>
+                </div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="featureDark" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <!-- واجهة مدمجة -->
+            <div class="feature-row">
+              <div class="feature-main">
+                <div class="feature-icon">
+                  <i class="fa-solid fa-compress"></i>
+                </div>
+                <div class="feature-text">
+                  <div class="feature-title">واجهة مدمجة</div>
+                  <div class="feature-desc">
+                    تصغير المسافات لعرض محتوى أكثر.
+                  </div>
+                </div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="featureCompact" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <!-- أنيميشن الواجهة -->
+            <div class="feature-row">
+              <div class="feature-main">
+                <div class="feature-icon">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i>
+                </div>
+                <div class="feature-text">
+                  <div class="feature-title">أنيميشن الواجهة</div>
+                  <div class="feature-desc">
+                    تفعيل حركات انتقال سلسة.
+                  </div>
+                </div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="featureAnim" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="appearance-footer">
+          <button
+            type="button"
+            class="appearance-save-btn"
+            id="saveAppearanceBtn"
+          >
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span>حفظ الإعدادات</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- منطق حفظ وتطبيق الإعدادات -->
+    <script>
+      const APPEARANCE_KEY = "saepelAppearance";
+
+      const cbDark = document.getElementById("featureDark");
+      const cbCompact = document.getElementById("featureCompact");
+      const cbAnim = document.getElementById("featureAnim");
+      const saveBtn = document.getElementById("saveAppearanceBtn");
+
+      function getAppearanceState() {
+        try {
+          const raw = localStorage.getItem(APPEARANCE_KEY);
+          if (!raw) return { dark: true, compact: false, anim: true }; // افتراضي
+          const parsed = JSON.parse(raw);
+          return {
+            dark: parsed.dark ?? true,
+            compact: !!parsed.compact,
+            anim: parsed.anim ?? true,
+          };
+        } catch {
+          return { dark: true, compact: false, anim: true };
+        }
+      }
+
+      function applyAppearance(state) {
+        const root = document.documentElement;
+        const body = document.body;
+
+        root.classList.toggle("theme-dark", !!state.dark);
+        body.classList.toggle("body-compact", !!state.compact);
+        body.classList.toggle("soft-anim", !!state.anim);
+
+        if (cbDark) cbDark.checked = !!state.dark;
+        if (cbCompact) cbCompact.checked = !!state.compact;
+        if (cbAnim) cbAnim.checked = !!state.anim;
+      }
+
+      function saveAppearance(state) {
+        localStorage.setItem(APPEARANCE_KEY, JSON.stringify(state));
+      }
+
+      function collectStateFromUI() {
+        return {
+          dark: cbDark ? cbDark.checked : true,
+          compact: cbCompact ? cbCompact.checked : false,
+          anim: cbAnim ? cbAnim.checked : true,
+        };
+      }
+
+      function onFeatureChange() {
+        const s = collectStateFromUI();
+        applyAppearance(s);
+        saveAppearance(s);
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const s = getAppearanceState();
+        applyAppearance(s);
+
+        [cbDark, cbCompact, cbAnim].forEach((el) => {
+          if (el) el.addEventListener("change", onFeatureChange);
+        });
+
+        if (saveBtn) {
+          saveBtn.addEventListener("click", () => {
+            const s = collectStateFromUI();
+            applyAppearance(s);
+            saveAppearance(s);
+
+            const old = saveBtn.innerHTML;
+            saveBtn.innerHTML =
+              '<i class="fa-solid fa-check"></i><span>تم الحفظ</span>';
+            setTimeout(() => {
+              saveBtn.innerHTML = old;
+            }, 1500);
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

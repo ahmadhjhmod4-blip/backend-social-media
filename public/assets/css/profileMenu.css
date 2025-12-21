@@ -1,0 +1,161 @@
+/* ================================
+   قائمة البروفايل (زر الثلاث نقاط العلوي)
+   ملف: assets/css/profileMenu.css
+   ================================ */
+
+/* تغطية الشاشة بالمودال */
+.profile-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: none; /* افتراضياً مخفي */
+  align-items: center;
+  justify-content: center;
+}
+
+/* إظهار المودال (يُضاف من JS) */
+.profile-menu-overlay.show {
+  display: flex;
+}
+
+/* الخلفية المعتمة خلف المودال */
+.profile-menu-backdrop {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top, rgba(24, 32, 80, 0.92), #020308 80%);
+  opacity: 0.95;
+  backdrop-filter: blur(18px);
+}
+
+/* صندوق المودال نفسه */
+.profile-menu-modal {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  margin: 0 16px;
+  border-radius: 24px;
+  padding: 14px 14px 10px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.14),
+      rgba(255, 255, 255, 0.04)
+    ),
+    radial-gradient(circle at top, rgba(93, 86, 255, 0.45), transparent 65%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 28px 55px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(22px);
+
+  transform: translateY(22px);
+  opacity: 0;
+  transition:
+    opacity 0.2s ease-out,
+    transform 0.2s ease-out;
+}
+
+/* أنميشن دخول المودال عند الإظهار */
+.profile-menu-overlay.show .profile-menu-modal {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* هيدر المودال (العنوان + زر الإغلاق) */
+.profile-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.profile-menu-header span {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* قائمة العناصر داخل المودال */
+.profile-menu-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 6px;
+}
+
+/* عنصر واحد في القائمة */
+.profile-menu-item {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 10px 9px;
+  border-radius: 16px;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  text-align: right;
+
+  transition:
+    background 0.16s ease-out,
+    transform 0.1s ease-out,
+    box-shadow 0.16s ease-out;
+}
+
+/* أيقونة داخل العنصر */
+.profile-menu-item i {
+  font-size: 0.95rem;
+  width: 22px;
+  text-align: center;
+  opacity: 0.9;
+}
+
+/* النص داخل العنصر */
+.profile-menu-item span {
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+/* تأثير hover */
+.profile-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  transform: translateY(-1px);
+}
+
+/* تأثير الضغط */
+.profile-menu-item:active {
+  transform: translateY(0);
+  box-shadow: none;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* عناصر خطيرة مثل الإبلاغ / تسجيل الخروج */
+.profile-menu-item.danger {
+  color: #ff6b81;
+}
+
+.profile-menu-item.danger i {
+  opacity: 1;
+}
+
+/* زر إغلاق المودال (نفس icon-btn العامة لكن ممكن نخصّصه لو حابب) */
+.profile-menu-close-btn {
+  border-radius: 999px;
+}
+
+/* تحسينات للجوال */
+@media (max-width: 480px) {
+  .profile-menu-modal {
+    margin: 0 10px;
+    border-radius: 22px;
+    padding-inline: 12px;
+  }
+
+  .profile-menu-item {
+    padding-inline: 10px;
+  }
+}

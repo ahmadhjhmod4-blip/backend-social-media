@@ -96,7 +96,13 @@
     </div>
 
     <script>
-      const API_BASE = "http://localhost:5000/api"; // نفس البورت اللي شغال عليه السيرفر
+      // يختار بين localhost أو سيرفر Render تلقائياً
+      const SERVER_BASE =
+        window.location.hostname === "localhost"
+          ? "http://localhost:5000"
+          : "https://backend-social-media-o89z.onrender.com";
+
+      const API_BASE = SERVER_BASE + "/api";
 
       const nameInput = document.getElementById("name");
       const emailInput = document.getElementById("email");
@@ -104,7 +110,7 @@
       const registerBtn = document.getElementById("registerBtn");
       const msgDiv = document.getElementById("msg");
 
-      registerBtn.addEventListener("click", async () => {
+      async function doRegister() {
         const name = nameInput.value.trim();
         const email = emailInput.value.trim();
         const password = passwordInput.value.trim();
@@ -136,16 +142,29 @@
           } else {
             msgDiv.textContent = data.msg || "تم إنشاء الحساب بنجاح";
             msgDiv.classList.add("success");
-            // ممكن تفضي الحقول
-            // nameInput.value = "";
-            // emailInput.value = "";
-            // passwordInput.value = "";
+
+            // بعد النجاح → رجّعه لصفحة تسجيل الدخول
+            setTimeout(() => {
+              window.location.href = "login.html";
+            }, 800);
           }
         } catch (err) {
           console.error(err);
           msgDiv.textContent = "تعذر الاتصال بالسيرفر";
           msgDiv.classList.add("error");
         }
+      }
+
+      // زر التسجيل
+      registerBtn.addEventListener("click", doRegister);
+
+      // Enter في أي حقل
+      [nameInput, emailInput, passwordInput].forEach((el) => {
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            doRegister();
+          }
+        });
       });
     </script>
   </body>

@@ -1,0 +1,161 @@
+/* assets/admin/admin.css */
+
+/* reset بسيط */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background: radial-gradient(circle at top, #1a1f3b 0, #050814 40%, #000 100%);
+  color: #f5f7ff;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* خلفية زجاجية خفيفة */
+.admin-page {
+  width: 100%;
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.admin-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 24px 22px 26px;
+  border-radius: 20px;
+  background: rgba(7, 12, 32, 0.85);
+  border: 1px solid rgba(120, 134, 255, 0.35);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(18px);
+}
+
+.admin-title {
+  font-size: 1.4rem;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.admin-subtitle {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+/* النموذج */
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.admin-label {
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-input {
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(130, 145, 255, 0.6);
+  background: rgba(10, 14, 40, 0.9);
+  color: #f5f7ff;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.admin-input::placeholder {
+  color: rgba(200, 207, 255, 0.55);
+}
+
+.admin-input:focus {
+  border-color: #8a9bff;
+  box-shadow: 0 0 0 1px rgba(138, 155, 255, 0.6);
+}
+
+/* زر الدخول */
+.admin-btn {
+  margin-top: 4px;
+  width: 100%;
+  padding: 10px 0;
+  border-radius: 999px;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, #6a7bff, #9d6bff);
+  color: #fff;
+  transition: transform 0.12s ease, box-shadow 0.12s ease,
+    opacity 0.12s ease, filter 0.12s ease;
+}
+
+.admin-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 30px rgba(108, 131, 255, 0.55);
+  filter: brightness(1.05);
+}
+
+.admin-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 4px 16px rgba(108, 131, 255, 0.4);
+}
+
+.admin-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* رسالة الخطأ */
+.admin-error {
+  margin-top: 6px;
+  font-size: 0.82rem;
+  background: rgba(255, 82, 82, 0.13);
+  border-radius: 10px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 123, 123, 0.55);
+  color: #ffd6d6;
+}
+
+/* ملاحظة أسفل الكرت */
+.admin-note {
+  font-size: 0.82rem;
+  text-align: center;
+  opacity: 0.8;
+}
+
+.admin-note a {
+  color: #a9b6ff;
+  text-decoration: none;
+}
+
+.admin-note a:hover {
+  text-decoration: underline;
+}
+
+/* استجابة للموبايل */
+@media (max-width: 480px) {
+  .admin-card {
+    padding: 20px 18px 22px;
+    border-radius: 18px;
+  }
+
+  .admin-title {
+    font-size: 1.25rem;
+  }
+
+  .admin-subtitle {
+    font-size: 0.85rem;
+  }
+}

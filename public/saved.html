@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Saepel - المحفوظات</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- أيقونات Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+
+    <!-- نفس ملف التصميم الرئيسي -->
+    <link rel="stylesheet" href="assets/css/style.css" />
+
+    <!-- شوية ستايل بسيط خاص بالمحفوظات -->
+    <style>
+      .saved-shell {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 80px 16px 32px;
+      }
+
+      .saved-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .saved-header-title {
+        font-size: 20px;
+        font-weight: 700;
+      }
+
+      .saved-header-sub {
+        font-size: 12px;
+        opacity: 0.8;
+      }
+
+      .saved-tabs {
+        display: flex;
+        gap: 8px;
+        margin: 12px 0 20px;
+        overflow-x: auto;
+      }
+
+      .saved-tab {
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        cursor: pointer;
+        white-space: nowrap;
+        backdrop-filter: blur(12px);
+        background: rgba(10, 12, 24, 0.5);
+      }
+
+      .saved-tab.active {
+        border-color: #6b8bff;
+        background: radial-gradient(circle at top, #6b8bff33, #111827);
+      }
+
+      .saved-empty {
+        text-align: center;
+        font-size: 13px;
+        opacity: 0.85;
+        margin-top: 30px;
+      }
+
+      .saved-empty i {
+        font-size: 32px;
+        margin-bottom: 8px;
+        display: block;
+        opacity: 0.7;
+      }
+
+      .saved-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .saved-tag {
+        font-size: 11px;
+        opacity: 0.8;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .saved-tag i {
+        font-size: 10px;
+      }
+
+      .saved-remove-btn {
+        margin-top: 6px;
+        font-size: 11px;
+        border: none;
+        background: transparent;
+        color: #ffb4b4;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 0;
+      }
+
+      .saved-remove-btn i {
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- نفس خلفية الأوربس -->
+    <div class="bg-orbs">
+      <div class="bg-orb orb-1"></div>
+      <div class="bg-orb orb-2"></div>
+      <div class="bg-orb orb-3"></div>
+    </div>
+
+    <!-- شريط علوي بسيط للمحفوظات -->
+    <header class="top-nav glass">
+      <div class="logo-area">
+        <button
+          class="icon-btn"
+          type="button"
+          onclick="window.location.href='index.html'"
+          title="الرجوع للرئيسية"
+        >
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+        <div class="logo-text">
+          <span>المحفوظات</span>
+          <span>كل ما حفظته على Saepel</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="saved-shell">
+      <section class="saved-header">
+        <div>
+          <div class="saved-header-title">
+            <i class="fa-regular fa-bookmark"></i>
+            المحفوظات
+          </div>
+          <div class="saved-header-sub">
+            راجع هنا كل المنشورات، الصور، الفيديوهات والروابط اللي حفظتها
+          </div>
+        </div>
+      </section>
+
+      <!-- Tabs -->
+      <div class="saved-tabs" id="savedTabs">
+        <button class="saved-tab active" data-filter="all">
+          <i class="fa-solid fa-layer-group"></i>
+          <span>الكل</span>
+        </button>
+        <button class="saved-tab" data-filter="posts">
+          <i class="fa-regular fa-note-sticky"></i>
+          <span>منشورات نصية</span>
+        </button>
+        <button class="saved-tab" data-filter="images">
+          <i class="fa-regular fa-image"></i>
+          <span>صور</span>
+        </button>
+        <button class="saved-tab" data-filter="videos">
+          <i class="fa-regular fa-circle-play"></i>
+          <span>فيديو</span>
+        </button>
+        <button class="saved-tab" data-filter="links">
+          <i class="fa-solid fa-link"></i>
+          <span>روابط</span>
+        </button>
+      </div>
+
+      <!-- قائمة المحفوظات -->
+      <div id="savedEmpty" class="saved-empty" style="display: none">
+        <i class="fa-regular fa-bookmark"></i>
+        لسا ما حفظت أي شي. اضغط على زر <strong>حفظ</strong> تحت أي منشور من
+        الصفحة الرئيسية 🌟
+      </div>
+
+      <div id="savedList" class="saved-list"></div>
+    </main>
+
+    <!-- سكربت صفحة المحفوظات -->
+    <script src="assets/js/saved.js"></script>
+  </body>
+</html>

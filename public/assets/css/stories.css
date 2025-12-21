@@ -1,0 +1,868 @@
+/* ================== شريط القصص (Stories Row) ================== */
+
+.stories-row {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  padding: 10px 16px 4px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+/* كرت أساسي للستوري */
+.story-card {
+  min-width: 82px;
+  max-width: 82px;
+  border-radius: 20px;
+  padding: 6px 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  background: linear-gradient(
+    145deg,
+    rgba(110, 74, 255, 0.24),
+    rgba(0, 209, 255, 0.16)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 18px 35px rgba(0, 0, 0, 0.45);
+  transition: transform 0.18s ease, box-shadow 0.18s ease,
+    border-color 0.18s ease, background 0.18s ease;
+}
+
+.story-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* كرت إضافة قصة */
+.story-add {
+  background: radial-gradient(
+      circle at top left,
+      rgba(110, 74, 255, 0.6),
+      transparent 60%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(0, 209, 255, 0.55),
+      transparent 60%
+    ),
+    rgba(5, 8, 20, 0.92);
+}
+
+/* محتوى الكرت */
+.story-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+/* صورة/أفاتار الستوري */
+.story-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(
+    circle at 30% 0,
+    rgba(255, 255, 255, 0.15),
+    rgba(15, 23, 42, 1)
+  );
+  overflow: hidden;
+}
+
+/* إطار متوهّج حول الصورة */
+.story-avatar::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from 220deg,
+    #ff8a00,
+    #ff3565,
+    #c53bff,
+    #00d1ff,
+    #ff8a00
+  );
+  z-index: 0;
+}
+
+.story-avatar::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle at 30% 0,
+    rgba(255, 255, 255, 0.2),
+    rgba(15, 23, 42, 0.96)
+  );
+  z-index: 1;
+}
+
+/* الصورة نفسها */
+.story-avatar img {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+/* أيقونة + داخل كرت إضافة قصة */
+.story-add-avatar {
+  color: #0f172a;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.story-add-avatar i {
+  position: relative;
+  z-index: 2;
+}
+
+/* اسم المستخدم تحت الستوري */
+.story-label {
+  font-size: 12px;
+  max-width: 80px;
+  text-align: center;
+  color: rgba(248, 250, 252, 0.9);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+/* سكروول القصص */
+.stories-scroll {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  padding-left: 4px;
+}
+
+/* إخفاء سكرول بار أنيق */
+.stories-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+.stories-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.6);
+  border-radius: 999px;
+}
+.stories-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ستوري تمت مشاهدتها */
+.story-card.viewed .story-avatar::before {
+  opacity: 0.25;
+}
+.story-card.viewed .story-label {
+  color: rgba(148, 163, 184, 0.9);
+}
+
+/* ================== عارض القصص (Story Viewer) ================== */
+
+.story-viewer-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(
+      circle at top,
+      rgba(15, 23, 42, 0.85),
+      rgba(2, 6, 23, 0.98)
+    ),
+    rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(20px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1300;
+}
+
+.story-viewer-overlay.active {
+  display: flex;
+}
+
+/* غلاف العارض */
+.story-viewer-shell {
+  width: 100%;
+  max-width: 420px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* الكرت نفسه */
+.story-viewer {
+  position: relative;
+  width: 100%;
+  height: clamp(480px, 78vh, 620px); /* ارتفاع ثابت نسبي للشاشة */
+  border-radius: 26px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(
+      circle at top left,
+      rgba(110, 74, 255, 0.55),
+      transparent 60%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(0, 209, 255, 0.5),
+      transparent 55%
+    ),
+    #020617;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+/* شريط التقدم */
+.story-progress {
+  height: 3px;
+  width: 100%;
+  background: rgba(15, 23, 42, 0.8);
+  position: relative;
+  overflow: hidden;
+}
+
+.story-progress-bar {
+  position: absolute;
+  inset: 0;
+  width: 0%;
+  background: linear-gradient(90deg, #22c55e, #06b6d4);
+  transition: width 0.08s linear;
+}
+
+/* ترويسة العارض */
+.story-viewer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 4px;
+  background: linear-gradient(
+    to bottom,
+    rgba(15, 23, 42, 0.9),
+    rgba(15, 23, 42, 0.2),
+    transparent
+  );
+}
+
+.story-viewer-user {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.story-viewer-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at 20% 0,
+    rgba(248, 250, 252, 0.4),
+    rgba(15, 23, 42, 1)
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e5e7eb;
+  text-transform: uppercase;
+}
+
+.story-viewer-meta span:first-child {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f9fafb;
+}
+
+.story-viewer-sub {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.story-viewer-time {
+  font-size: 11px;
+  color: rgba(148, 163, 184, 0.95);
+}
+
+.story-viewer-views {
+  font-size: 11px;
+  color: rgba(148, 163, 184, 0.95);
+}
+
+/* أزرار الهيدر */
+.story-viewer-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.story-icon-btn {
+  border: none;
+  outline: none;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.85);
+  color: rgba(226, 232, 240, 0.96);
+  font-size: 14px;
+  transition: background 0.16s ease, transform 0.16s ease,
+    color 0.16s ease;
+}
+.story-icon-btn:hover {
+  background: rgba(30, 64, 175, 0.95);
+  transform: translateY(-1px);
+}
+
+/* جسم العارض */
+.story-viewer-body {
+  flex: 1 1 auto;          /* ياخذ المساحة المتبقية فقط */
+  min-height: 0;           /* مهم مع flex عشان ما يطلع برا الكرت */
+  display: flex;
+  padding: 4px 8px 0;
+  align-items: center;     /* توسيط الميديا عمودياً */
+  justify-content: center; /* توسيط الميديا أفقياً */
+}
+
+.story-viewer-media {
+  border-radius: 22px;
+  overflow: hidden;
+  background: #020617;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  position: relative;
+  display: flex;           /* لتوسيط الميديا داخل الإطار */
+  align-items: center;
+  justify-content: center;
+}
+
+.story-viewer-media img,
+.story-viewer-media video {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;             /* يحافظ على النسبة الأصلية */
+  height: auto;
+  object-fit: contain;     /* يظهر الصورة/الفيديو كاملة بدون قص */
+}
+
+/* قلب الأنيميشن */
+.story-heart-burst {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.3);
+  font-size: 64px;
+  opacity: 0;
+  pointer-events: none;
+  animation: storyHeartPop 700ms ease-out forwards;
+}
+
+@keyframes storyHeartPop {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0;
+  }
+  30% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 0;
+  }
+}
+
+/* لا يوجد محتوى */
+.story-viewer-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: rgba(226, 232, 240, 0.9);
+  text-align: center;
+  padding: 0 16px;
+}
+
+/* تفاعل */
+.story-viewer-interactions {
+  padding: 6px 10px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.story-reactions {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.reaction-btn {
+  border: none;
+  outline: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.9);
+  color: #f9fafb;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+.reaction-btn:hover {
+  transform: translateY(-1px) scale(1.05);
+  background: rgba(37, 99, 235, 0.95);
+}
+
+.story-reply-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: 999px;
+  padding: 4px 6px 4px 4px;
+}
+
+.story-reply-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: #e5e7eb;
+  font-size: 13px;
+  outline: none;
+}
+.story-reply-input::placeholder {
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.story-reply-send {
+  border: none;
+  outline: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  color: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+.story-reply-send:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+/* أزرار التنقل */
+.story-viewer-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 10px 8px;
+}
+
+.story-nav-btn {
+  border: none;
+  outline: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.92);
+  color: rgba(226, 232, 240, 0.98);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.16s ease, transform 0.16s ease,
+    color 0.16s ease;
+}
+.story-nav-btn:hover {
+  background: rgba(37, 99, 235, 0.96);
+  transform: translateY(-1px);
+}
+
+/* ================== تطوير: واجهة إنشاء الستوري (Create Story Modal) ================== */
+
+.story-create-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1400;
+}
+
+.story-create-overlay.active {
+  display: flex;
+}
+
+.story-create-modal {
+  width: min(420px, 100% - 32px);
+  max-height: 90vh;
+  background: rgba(8, 12, 30, 0.96);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  padding: 16px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  backdrop-filter: blur(20px);
+}
+
+/* الهيدر */
+.sc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.sc-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.sc-close {
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+/* التبويبات */
+.sc-tabs {
+  display: flex;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 4px;
+  border-radius: 999px;
+}
+
+.sc-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: #d8ddff;
+  font-size: 13px;
+  padding: 6px 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.sc-tab-active {
+  background: linear-gradient(135deg, #6e4aff, #00e1ff);
+  color: #050814;
+  font-weight: 600;
+}
+
+/* محتوى المودال */
+.sc-body {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sc-body-active {
+  display: flex;
+}
+
+/* زر الرفع */
+.sc-upload-label {
+  border-radius: 16px;
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  padding: 14px;
+  text-align: center;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  color: #dfe4ff;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.sc-upload-label i {
+  font-size: 24px;
+}
+
+/* المعاينة */
+.sc-preview {
+  margin-top: 6px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #000;
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sc-preview video,
+.sc-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sc-preview-placeholder {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* النص فقط (جاهزة لاحقاً) */
+.sc-textarea {
+  width: 100%;
+  min-height: 80px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(2, 5, 18, 0.9);
+  padding: 8px 10px;
+  color: #f5f6ff;
+  resize: vertical;
+  font-size: 13px;
+}
+
+.sc-text-preview {
+  border-radius: 18px;
+  overflow: hidden;
+  min-height: 220px;
+}
+
+.sc-text-story {
+  width: 100%;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  background: radial-gradient(circle at top, #ff5f6d, #ffc371);
+}
+
+/* الفوتر */
+.sc-footer {
+  margin-top: 4px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sc-submit-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 18px;
+  background: linear-gradient(135deg, #6e4aff, #00e1ff);
+  color: #050814;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* ================== تطوير: أكشنات المشاهدات / حذف / إبلاغ / كتم ================== */
+
+.story-footer-actions {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 5;
+  color: #fff;
+  font-size: 12px;
+}
+
+.sf-views-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(15, 23, 42, 0.75);
+  color: #e5e7eb;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.sf-views-btn i {
+  font-size: 13px;
+}
+
+.sf-actions-right {
+  display: flex;
+  gap: 6px;
+}
+
+.sf-icon-btn {
+  border: none;
+  border-radius: 999px;
+  width: 28px;
+  height: 28px;
+  background: rgba(15, 23, 42, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #e5e7eb;
+  font-size: 14px;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.sf-icon-btn:hover {
+  background: rgba(30, 64, 175, 0.96);
+  transform: translateY(-1px);
+}
+
+.sf-icon-btn.sf-danger {
+  color: #fecaca;
+}
+
+.sf-icon-btn.sf-muted {
+  background: rgba(127, 29, 29, 0.9);
+  color: #fecaca;
+}
+
+/* لوحة المشاهدات */
+.story-views-panel {
+  position: absolute;
+  bottom: 46px;
+  left: 10px;
+  width: 230px;
+  max-height: 210px;
+  background: rgba(8, 12, 30, 0.97);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
+  padding: 8px;
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 6;
+}
+
+.story-views-panel.active {
+  display: flex;
+}
+
+.sf-views-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sf-views-header span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.sf-views-header button {
+  border: none;
+  background: transparent;
+  color: #e5e7eb;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.sf-views-list {
+  margin-top: 6px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.sf-view-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+  color: #e5e7eb;
+}
+
+.sf-view-item img {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* ================== موبايل / شاشات أصغر ================== */
+
+@media (max-width: 640px) {
+  .stories-row {
+    padding-inline: 10px;
+  }
+
+  .story-card {
+    min-width: 72px;
+    max-width: 72px;
+  }
+
+  .story-avatar {
+    width: 52px;
+    height: 52px;
+  }
+
+  .story-viewer-shell {
+    padding-inline: 6px;
+  }
+
+  .story-viewer {
+    border-radius: 22px;
+    height: clamp(460px, 80vh, 580px);
+  }
+
+  .story-viewer-body {
+    padding-inline: 4px;
+  }
+
+  .story-viewer-media {
+    border-radius: 20px;
+  }
+
+  .story-reply-input {
+    font-size: 12px;
+  }
+
+  .story-views-panel {
+    left: 8px;
+    right: 8px;
+    width: auto;
+  }
+}
