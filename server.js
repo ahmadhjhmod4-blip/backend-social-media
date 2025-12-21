@@ -821,7 +821,7 @@ app.use(
   })
 );
 // ✅ مهم لبعض المتصفحات مع preflight
-app.options("*", cors());
+app.options(/.*/, cors()); // Express v5: استخدم Regex بدل "*"
 app.use(express.json({ limit: "15mb" })); // ✅ حتى لا ينفجر لو وصل DataURL صغير (لكن الأفضل دائماً رفع كملف)
 
 // ملفات الرفع (الصور / الفيديو / الصوت) كـ static
