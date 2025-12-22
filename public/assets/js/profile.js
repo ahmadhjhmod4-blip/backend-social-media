@@ -1,5 +1,7 @@
 // ===== إعدادات السيرفر / API =====
-const SERVER_BASE = "http://localhost:5000";
+// ✅ مهم للنشر على Render: لا تتركه localhost
+// يعتمد على نفس الدومين الذي فتحت منه الصفحة (localhost أثناء التطوير، و onrender أثناء النشر)
+const SERVER_BASE = window.SERVER_BASE || window.location.origin;
 const API_BASE = SERVER_BASE + "/api";
 
 // ===== دوال مساعدة عامة =====
