@@ -1110,7 +1110,12 @@ const adminMiddleware = async (req, res, next) => {
 };
 
 // دالة بسيطة لضمان أن القيمة مصفوفة
-const ensureArray = (v) => (Array.isArray(v) ? v : []);
+const ensureArray = \(v\) => \(Array\.isArray\(v\) \? v : \[\]\);
+
+// ✅ توحيد/تنظيف الإدخالات (مهم لمنع مشكلة: التسجيل يحفظ Email بحروف كبيرة ثم تسجيل الدخول يبحث lowercase)
+const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
+const normalizeUsername = (u) => String(u || "").trim().replace(/^@+/, "");
+
 
 // ================== اتصال MongoDB ==================
 const MONGO_URI = process.env.MONGO_URI || process.env.MONGO_URL || "mongodb://127.0.0.1:27017/socialapp";
@@ -1129,13 +1134,14 @@ app.get("/api/test", (req, res) => {
 app.post("/api/register", async (req, res) => {
   try {
     const { name, username, email, password } = req.body;
-    const finalUsername = (username || name || "").trim();
+    const emailNorm = normalizeEmail(email);
+const finalUsername = (username || name || "").trim();
 
-    if (!finalUsername || !email || !password) {
+    if (!finalUsername || !emailNorm || !password) {
       return res.status(400).json({ msg: "يرجى تعبئة جميع البيانات" });
     }
 
-    const exists = await User.findOne({ email });
+    const exists = await User.findOne({ email: emailNorm });
     if (exists) {
       return res.status(400).json({ msg: "هذا البريد مستخدم مسبقاً" });
     }
@@ -1145,7 +1151,7 @@ app.post("/api/register", async (req, res) => {
 
     const newUser = new User({
       username: finalUsername,
-      email,
+      email: emailNorm,
       password: hashedPassword,
     });
 
@@ -1160,15 +1166,26 @@ app.post("/api/register", async (req, res) => {
 
 app.post("/api/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    // ✅ دعم قديم وجديد:
+    // - قديم: { email, password }
+    // - جديد: { identifier, password }  (email أو username)
+    const { email, identifier, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ msg: "الرجاء إدخال البريد وكلمة المرور" });
+    const loginId = (identifier || email || "").toString().trim();
+    if (!loginId || !password) {
+      return res.status(400).json({ msg: "الرجاء إدخال البريد/اسم المستخدم وكلمة المرور" });
     }
 
-    const user = await User.findOne({ email });
+    let query;
+    if (loginId.includes("@") && !loginId.startsWith("@")) {
+      query = { email: normalizeEmail(loginId) };
+    } else {
+      query = { username: normalizeUsername(loginId) };
+    }
+
+    const user = await User.findOne(query);
     if (!user) {
-      return res.status(400).json({ msg: "هذا البريد غير مسجل" });
+      return res.status(400).json({ msg: "البريد أو اسم المستخدم غير مسجل" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -1201,13 +1218,13 @@ app.post("/api/login", async (req, res) => {
 app.post("/api/auth/register", async (req, res) => {
   try {
     const { username, email, password, birthdate } = req.body;
-    const finalUsername = (username || "").trim();
-
-    if (!finalUsername || !email || !password) {
+    const emailNorm = normalizeEmail(email);
+    const finalUsername = normalizeUsername(username);
+if (!finalUsername || !emailNorm || !password) {
       return res.status(400).json({ msg: "يرجى تعبئة جميع البيانات" });
     }
 
-    const exists = await User.findOne({ email });
+    const exists = await User.findOne({ email: emailNorm });
     if (exists) {
       return res.status(400).json({ msg: "هذا البريد مستخدم مسبقاً" });
     }
@@ -1217,7 +1234,7 @@ app.post("/api/auth/register", async (req, res) => {
 
     const newUser = new User({
       username: finalUsername,
-      email,
+      email: emailNorm,
       password: hashedPassword,
       birthdate,
     });
@@ -1225,7 +1242,7 @@ app.post("/api/auth/register", async (req, res) => {
     await newUser.save();
 
     res.json({
-      msg: "تم إنشاء الحساب بنجاح، تم إرسال رسالة تفعيل (تجريبياً) إلى بريدك.",
+      msg: "تم إنشاء الحساب بنجاح ✅ يمكنك تسجيل الدخول الآن. (التفعيل عبر البريد غير مفعّل حالياً)"
     });
   } catch (err) {
     console.error(err);
@@ -1236,18 +1253,19 @@ app.post("/api/auth/register", async (req, res) => {
 // LOGIN جديد /api/auth/login
 app.post("/api/auth/login", async (req, res) => {
   try {
-    const { identifier, password } = req.body;
+    const { identifier, email, username, password } = req.body;
 
-    if (!identifier || !password) {
+    const loginId = (identifier || email || username || "").toString().trim();
+
+    if (!loginId || !password) {
       return res.status(400).json({ msg: "الرجاء إدخال البريد/اسم المستخدم وكلمة المرور" });
     }
 
     let query;
-    if (identifier.includes("@") && !identifier.startsWith("@")) {
-      query = { email: identifier.toLowerCase() };
+    if (loginId.includes("@") && !loginId.startsWith("@")) {
+      query = { email: normalizeEmail(loginId) };
     } else {
-      const clean = identifier.replace(/^@+/, "");
-      query = { username: clean };
+      query = { username: normalizeUsername(loginId) };
     }
 
     const user = await User.findOne(query);
@@ -1286,19 +1304,21 @@ app.post("/api/auth/resend-verify-email", async (req, res) => {
   try {
     const { email } = req.body;
 
-    if (!email) {
+    const emailNorm = normalizeEmail(email);
+
+    if (!emailNorm) {
       return res.status(400).json({ msg: "يرجى إرسال البريد الإلكتروني" });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: emailNorm });
     if (!user) {
       return res.status(400).json({ msg: "هذا البريد غير مسجل لدينا" });
     }
 
-    console.log("Pretend sending verify email to:", email);
+    console.log("Verify email requested (not configured). Email:", emailNorm);
 
     return res.json({
-      msg: "تم إعادة إرسال رسالة التفعيل إلى بريدك (تجريبياً).",
+      msg: "ميزة التفعيل عبر البريد غير مفعّلة حالياً. تم تسجيل طلبك فقط (تجريبياً)."
     });
   } catch (err) {
     console.error(err);

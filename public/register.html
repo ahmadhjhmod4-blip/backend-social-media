@@ -1,14 +1,12 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
-  <head>
-    <meta charset="UTF-8" />
-    <title>إنشاء حساب - Saepel</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-    />
-    <style>
+
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"/>
+<title>إنشاء حساب - Saepel</title>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<style>
       * {
         box-sizing: border-box;
         margin: 0;
@@ -341,153 +339,124 @@
         }
       }
     </style>
-  </head>
-  <body>
-    <div class="bg-orbs">
-      <div class="bg-orb"></div>
-      <div class="bg-orb"></div>
-      <div class="bg-orb"></div>
-    </div>
-
-    <div class="card">
-      <div class="brand">
-        <div class="brand-logo">S</div>
-        <div>
-          <div class="brand-text-title">Saepel</div>
-          <div class="brand-text-sub">انضم إلى مجتمع Saepel ✨</div>
-        </div>
-      </div>
-
-      <h1>إنشاء حساب جديد</h1>
-      <p class="subtitle">أنشئ حسابك وابدأ مشاركة أفكارك مع الآخرين.</p>
-
-      <div id="registerMessage" class="alert" style="display: none"></div>
-
-      <form id="registerForm">
-        <div class="field">
-          <label for="username">اسم المستخدم</label>
-          <div class="input-wrapper">
-            <i class="fa-regular fa-user left"></i>
-            <input
-              id="username"
-              type="text"
-              placeholder="اكتب اسم يظهر للآخرين"
-              required
-            />
-          </div>
-          <span class="tiny">يمكن أن يحتوي على حروف وأرقام و _</span>
-        </div>
-
-        <div class="field">
-          <label for="email">البريد الإلكتروني</label>
-          <div class="input-wrapper">
-            <i class="fa-regular fa-envelope left"></i>
-            <input
-              id="email"
-              type="email"
-              placeholder="example@domain.com"
-              autocomplete="email"
-              required
-            />
-          </div>
-        </div>
-
-        <!-- تاريخ الميلاد: ٣ قوائم منسدلة -->
-        <div class="field">
-          <label>تاريخ الميلاد</label>
-
-          <div class="birth-row">
-            <!-- اليوم -->
-            <div class="input-wrapper">
-              <select id="birthDay">
-                <option value="">اليوم</option>
-              </select>
-            </div>
-
-            <!-- الشهر -->
-            <div class="input-wrapper">
-              <select id="birthMonth">
-                <option value="">الشهر</option>
-              </select>
-            </div>
-
-            <!-- السنة -->
-            <div class="input-wrapper year-col">
-              <select id="birthYear">
-                <option value="">السنة</option>
-              </select>
-            </div>
-          </div>
-
-          <span class="tiny">
+</head>
+<body>
+<div class="bg-orbs">
+<div class="bg-orb"></div>
+<div class="bg-orb"></div>
+<div class="bg-orb"></div>
+</div>
+<div class="card">
+<div class="brand">
+<div class="brand-logo">S</div>
+<div>
+<div class="brand-text-title">Saepel</div>
+<div class="brand-text-sub">انضم إلى مجتمع Saepel ✨</div>
+</div>
+</div>
+<h1>إنشاء حساب جديد</h1>
+<p class="subtitle">أنشئ حسابك وابدأ مشاركة أفكارك مع الآخرين.</p>
+<div class="alert" id="registerMessage" style="display: none"></div>
+<form id="registerForm">
+<div class="field">
+<label for="username">اسم المستخدم</label>
+<div class="input-wrapper">
+<i class="fa-regular fa-user left"></i>
+<input id="username" placeholder="اكتب اسم يظهر للآخرين" required="" type="text"/>
+</div>
+<span class="tiny">يمكن أن يحتوي على حروف وأرقام و _</span>
+</div>
+<div class="field">
+<label for="email">البريد الإلكتروني</label>
+<div class="input-wrapper">
+<i class="fa-regular fa-envelope left"></i>
+<input autocomplete="email" id="email" placeholder="example@domain.com" required="" type="email"/>
+</div>
+</div>
+<!-- تاريخ الميلاد: ٣ قوائم منسدلة -->
+<div class="field">
+<label>تاريخ الميلاد</label>
+<div class="birth-row">
+<!-- اليوم -->
+<div class="input-wrapper">
+<select id="birthDay">
+<option value="">اليوم</option>
+</select>
+</div>
+<!-- الشهر -->
+<div class="input-wrapper">
+<select id="birthMonth">
+<option value="">الشهر</option>
+</select>
+</div>
+<!-- السنة -->
+<div class="input-wrapper year-col">
+<select id="birthYear">
+<option value="">السنة</option>
+</select>
+</div>
+</div>
+<span class="tiny">
             يجب أن يكون عمرك 13 سنة أو أكثر لاستخدام Saepel.
           </span>
-        </div>
-
-        <div class="row-2">
-          <div class="field">
-            <label for="password">كلمة المرور</label>
-            <div class="input-wrapper">
-              <i class="fa-solid fa-lock left"></i>
-              <input
-                id="password"
-                type="password"
-                placeholder="كلمة مرور قوية"
-                autocomplete="new-password"
-                required
-              />
-              <i
-                class="fa-regular fa-eye toggle-password"
-                id="togglePassword"
-              ></i>
-            </div>
-            <span class="tiny">
+</div>
+<div class="row-2">
+<div class="field">
+<label for="password">كلمة المرور</label>
+<div class="input-wrapper">
+<i class="fa-solid fa-lock left"></i>
+<input autocomplete="new-password" id="password" placeholder="كلمة مرور قوية" required="" type="password"/>
+<i class="fa-regular fa-eye toggle-password" id="togglePassword"></i>
+</div>
+<span class="tiny">
               استخدم أحرف كبيرة وصغيرة وأرقام ورموز لزيادة الأمان.
             </span>
-          </div>
-
-          <div class="field">
-            <label for="confirmPassword">تأكيد كلمة المرور</label>
-            <div class="input-wrapper">
-              <i class="fa-solid fa-check left"></i>
-              <input
-                id="confirmPassword"
-                type="password"
-                placeholder="أعد إدخال كلمة المرور"
-                required
-              />
-            </div>
-          </div>
-        </div>
-
-        <div class="terms-wrapper">
-          <input type="checkbox" id="terms" />
-          <span>
+</div>
+<div class="field">
+<label for="confirmPassword">تأكيد كلمة المرور</label>
+<div class="input-wrapper">
+<i class="fa-solid fa-check left"></i>
+<input id="confirmPassword" placeholder="أعد إدخال كلمة المرور" required="" type="password"/>
+</div>
+</div>
+</div>
+<div class="terms-wrapper">
+<input id="terms" type="checkbox"/>
+<span>
             أوافق على
             <a href="#" target="_blank">شروط الاستخدام</a>
             و
             <a href="#" target="_blank">سياسة الخصوصية</a>
             الخاصة بمنصة Saepel.
           </span>
-        </div>
-
-        <button type="submit" class="btn-primary" id="registerBtn">
+</div>
+<button class="btn-primary" id="registerBtn" type="submit">
           إنشاء الحساب
         </button>
-      </form>
-
-      <p class="footer-txt">
+</form>
+<p class="footer-txt">
         عندك حساب بالفعل؟ <a href="login.html">تسجيل الدخول</a>
-      </p>
-
-      <div id="resendSection" class="resend-link" style="display: none">
+</p>
+<div class="resend-link" id="resendSection" style="display: none">
         لم يصلك بريد التفعيل؟ اضغط هنا لإعادة الإرسال.
       </div>
-    </div>
+</div>
+<script>
 
-    <script>
       // ✅ استخدام نفس الدومين اللي الصفحة شغّالة منه
-      const API_BASE = window.location.origin + "/api";
+      const ORIGIN = window.location.origin;
+      const DEFAULT_API_BASE = (ORIGIN && ORIGIN !== "null") ? (ORIGIN + "/api") : "https://backend-social-media-1ininin.onrender.com/api";
+      // تقدر تغيّر الـ API Base مؤقتاً من الكونسول: localStorage.setItem("SAEPEL_API_BASE","https://.../api")
+      const API_BASE = window.SAEPEL_API_BASE || localStorage.getItem("SAEPEL_API_BASE") || DEFAULT_API_BASE;
+
+      async function safeReadJson(res) {
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          try { return await res.json(); } catch { return null; }
+        }
+        try { return { message: await res.text() }; } catch { return null; }
+      }
+
 
       const registerForm = document.getElementById("registerForm");
       const registerMessage = document.getElementById("registerMessage");
@@ -652,11 +621,11 @@
             }),
           });
 
-          const data = await res.json();
+          const data = (await safeReadJson(res)) || {};
 
           if (!res.ok) {
             showRegisterMessage(
-              data.msg || "حدث خطأ أثناء إنشاء الحساب.",
+              data.msg || data.message || "حدث خطأ أثناء إنشاء الحساب.",
               "error"
             );
           } else {
@@ -700,7 +669,7 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email }),
           });
-          const data = await res.json();
+          const data = (await safeReadJson(res)) || {};
 
           if (!res.ok) {
             showRegisterMessage(
@@ -721,6 +690,7 @@
           );
         }
       });
-    </script>
-  </body>
+    
+</script>
+</body>
 </html>
