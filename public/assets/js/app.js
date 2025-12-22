@@ -1,5 +1,21 @@
 // ===== إعدادات السيرفر / API =====
-const SERVER_BASE = "http://localhost:5000";
+// ملاحظة: على Render لا تستخدم localhost.
+// - إذا كنت فاتح الواجهة من نفس دومين Render (نفس السيرفر)، نخليها نفس الأصل: ""
+// - إذا كنت على localhost نخليها localhost
+// - غير هيك (مثلاً Frontend على دومين ثاني) نخليها دومين Render الافتراضي
+const LOCAL_BASE = "http://localhost:5000";
+const RENDER_BASE = "https://backend-social-media-1ininin.onrender.com";
+
+// يمكن override من الـHTML قبل تحميل app.js:
+// <script>window.SERVER_BASE="https://...";</script>
+const SERVER_BASE =
+  window.SERVER_BASE ||
+  window.API_BASE ||
+  (location.hostname === "localhost" || location.hostname === "127.0.0.1"
+    ? LOCAL_BASE
+    : location.hostname.endsWith("onrender.com")
+    ? ""
+    : RENDER_BASE);
 const API_BASE = SERVER_BASE + "/api";
 
 // ===== دوال مساعدة =====
