@@ -18,6 +18,11 @@ const SERVER_BASE =
     : RENDER_BASE);
 const API_BASE = SERVER_BASE + "/api";
 
+// ✅ اجعل الـ base متاح لباقي الملفات (مثل stories.js)
+window.API_BASE_URL = window.API_BASE_URL || SERVER_BASE;
+window.SERVER_BASE = window.SERVER_BASE || SERVER_BASE;
+window.API_BASE = window.API_BASE || SERVER_BASE;
+
 // ===== دوال مساعدة =====
 function getToken() {
   return localStorage.getItem("token") || "";

@@ -1,6 +1,8 @@
 // ================== إعدادات السيرفر / API ==================
-const SERVER_BASE_STORIES = "http://localhost:5000";
-const API_BASE_STORIES = SERVER_BASE_STORIES + "/api";
+// ✅ على Render لا تستخدم localhost. الأفضل نخليها relative لما تكون الواجهة من نفس السيرفر.
+// تقدر تعمل override من HTML قبل تحميل الملف:  window.API_BASE_URL="https://your-backend.com";
+const SERVER_BASE_STORIES = (window.API_BASE_URL || window.SERVER_BASE || window.API_BASE || "").toString().trim();
+const API_BASE_STORIES = (SERVER_BASE_STORIES ? SERVER_BASE_STORIES : "") + "/api";
 
 // دوال مساعدة بسيطة
 function getToken() {

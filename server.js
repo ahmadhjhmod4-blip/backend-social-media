@@ -17,7 +17,7 @@ import User from "./models/User.js";
 import Post from "./models/Post.js";
 import Report from "./models/Report.js";
 import Story from "./models/Story.js"; // ⭐ موديل القصص
-import upload from "./upload.js";
+import upload, { uploadsDir } from "./upload.js";
 import Conversation from "./models/Conversation.js"; // ⭐ موديل المحادثات
 import Message from "./models/Message.js"; // ⭐ موديل الرسائل
 import CallLog from "./models/CallLog.js"; // ⭐ سجل الاتصالات
@@ -68,7 +68,7 @@ const io = new Server(server, {
 const connectedUsers = new Map();
 
 // ================== Helpers للصوت/المرفقات عبر DataURL ==================
-const UPLOADS_DIR = path.join(__dirname, "uploads");
+const UPLOADS_DIR = uploadsDir; // ✅ نفس مسار multer (يدعم Render Persistent Disk)
 
 async function ensureUploadsDir() {
   try {
@@ -825,6 +825,9 @@ app.options(/.*/, cors()); // Express v5: استخدم Regex بدل "*"
 app.use(express.json({ limit: "15mb" })); // ✅ حتى لا ينفجر لو وصل DataURL صغير (لكن الأفضل دائماً رفع كملف)
 
 // ملفات الرفع (الصور / الفيديو / الصوت) كـ static
+// ✅ المسار الحقيقي الذي يحفظ فيه multer (upload.js) — مهم جداً على Render
+app.use("/uploads", express.static(uploadsDir));
+
 // ✅ يدعم أكثر من مسار لأن بعض النسخ تخزّن الملفات في (backend/uploads) أو (backend/public/uploads) أو (projectRoot/uploads)
 const UPLOADS_DIR_BACKEND = path.join(__dirname, "uploads");
 const UPLOADS_DIR_PUBLIC = path.join(__dirname, "public", "uploads");
