@@ -1110,7 +1110,7 @@ const adminMiddleware = async (req, res, next) => {
 };
 
 // دالة بسيطة لضمان أن القيمة مصفوفة
-const ensureArray = \(v\) => \(Array\.isArray\(v\) \? v : \[\]\);
+const ensureArray = (v) => (Array.isArray(v) ? v : []);
 
 // ✅ توحيد/تنظيف الإدخالات (مهم لمنع مشكلة: التسجيل يحفظ Email بحروف كبيرة ثم تسجيل الدخول يبحث lowercase)
 const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
