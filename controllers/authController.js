@@ -5,9 +5,11 @@ import jwt from "jsonwebtoken";
 // إنشاء حساب جديد
 export const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { username, name, email, password, birthdate, birthDate } = req.body;
+    const finalUsername = (username || name || "").trim();
+    const finalBirthdate = birthdate || birthDate;
 
-    if (!name || !email || !password) {
+    if (!finalUsername || !email || !password) {
       return res.status(400).json({ msg: "الرجاء إدخال جميع البيانات" });
     }
 
@@ -19,16 +21,17 @@ export const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
-      name,
+      username: finalUsername,
       email,
       password: hashedPassword,
+      birthdate: finalBirthdate,
     });
 
     return res.status(201).json({
       msg: "تم إنشاء الحساب بنجاح",
       user: {
         id: user._id,
-        name: user.name,
+        name: user.username || user.name,
         email: user.email,
       },
     });
@@ -58,7 +61,7 @@ export const login = async (req, res) => {
 
     const token = jwt.sign(
       { id: user._id },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || "DEV_SECRET_CHANGE_ME",
       { expiresIn: "7d" }
     );
 
@@ -67,7 +70,7 @@ export const login = async (req, res) => {
       token,
       user: {
         id: user._id,
-        name: user.name,
+        name: user.username || user.name,
         email: user.email,
       },
     });

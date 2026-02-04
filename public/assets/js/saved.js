@@ -123,7 +123,7 @@ function detectPostType(post) {
 function renderSavedCard(post) {
   const postUser = post.user || null;
   const userName =
-    (postUser && (postUser.username || postUser.name)) ||
+    (postUser && (postUser.fullName || postUser.name || postUser.username)) ||
     post.authorName ||
     "مستخدم";
   const firstChar = userName.trim()[0]

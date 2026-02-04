@@ -5,13 +5,28 @@ import mongoose from "mongoose";
 const userSchema = new mongoose.Schema(
   {
     // Ø§Ø³Ù… Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… (ÙŠØ¸Ù‡Ø± ÙÙŠ Saepel)
+    // ÇÓã ÇáãÓÊÎÏã (íÙåÑ İí Saepel)
+    // ÇÓã ÇáãÓÊÎÏã (íÙåÑ İí Saepel)
     username: {
       type: String,
       required: true,
       trim: true,
-      unique: true, // âœ… Ù…Ø§ ÙÙŠ Ø§Ø³Ù… Ù…Ø³ØªØ®Ø¯Ù… Ù…ÙƒØ±Ø±
+      unique: true,
     },
 
+    // ÇáÇÓã ÇáãÚÑæÖ (íãßä Ãä íßæä ÚÑÈí)
+    fullName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    // ãÚÑİ ÚÇã ËÇÈÊ (ááÑæÇÈØ) ãËá: SA-0001
+    publicId: {
+      type: String,
+      unique: true,
+      index: true,
+    },
     email: {
       type: String,
       required: true,
@@ -117,3 +132,4 @@ const userSchema = new mongoose.Schema(
 const User = mongoose.model("User", userSchema);
 
 export default User;
+

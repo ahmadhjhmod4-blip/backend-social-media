@@ -23,7 +23,7 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
     />
   </head>
-  <body>
+  <body class="theme-beige">
     <!-- خلفيات orbs -->
     <div class="bg-orbs">
       <div class="bg-orb orb-1"></div>
@@ -113,11 +113,6 @@
 
             <div class="profile-actions">
               <!-- زر تعديل البروفايل (لما يكون البروفايل تبعك) -->
-              <button class="btn-outline" id="editProfileBtn" type="button">
-                <i class="fa-solid fa-pen"></i>
-                <span>تعديل البروفايل</span>
-              </button>
-
               <!-- زر متابعة / إلغاء متابعة (يظهر لما تزور بروفايل شخص آخر) -->
               <button
                 class="btn-primary"
@@ -246,14 +241,22 @@
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
-        <div class="modal-body">
-          <label class="field-label">اسم المستخدم</label>
-          <input
-            type="text"
-            id="editUsernameInput"
-            class="text-input"
-            placeholder="اكتب اسمك"
-          />
+          <div class="modal-body">
+            <label class="field-label">الاسم الكامل (يعرض للناس)</label>
+            <input
+              type="text"
+              id="editFullNameInput"
+              class="text-input"
+              placeholder="اكتب اسمك (عربي أو إنكليزي)"
+            />
+
+            <label class="field-label">اسم المستخدم (English فقط)</label>
+            <input
+              type="text"
+              id="editUsernameInput"
+              class="text-input"
+              placeholder="مثال: saepel_user"
+            />
 
           <label class="field-label">نبذة عنك</label>
           <textarea
@@ -608,6 +611,11 @@
         </form>
       </div>
     </div>
+
+    <!-- زر تعديل البروفايل العائم -->
+    <button class="profile-fab" id="editProfileFab" type="button" aria-label="تعديل البروفايل">
+      <i class="fa-solid fa-pen"></i>
+    </button>
 
     <!-- سكربتات -->
     <script src="assets/js/profile.js"></script>

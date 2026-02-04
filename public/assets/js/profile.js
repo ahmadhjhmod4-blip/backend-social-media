@@ -1,7 +1,14 @@
 // ===== إعدادات السيرفر / API =====
 // ✅ مهم للنشر على Render: لا تتركه localhost
 // يعتمد على نفس الدومين الذي فتحت منه الصفحة (localhost أثناء التطوير، و onrender أثناء النشر)
-const SERVER_BASE = window.SERVER_BASE || window.location.origin;
+const SERVER_BASE = (function resolveBase() {
+  if (window.SERVER_BASE) return window.SERVER_BASE;
+  if (window.API_BASE) return window.API_BASE;
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    return `${window.location.protocol}//${window.location.hostname}:5000`;
+  }
+  return window.location.origin;
+})();
 const API_BASE = SERVER_BASE + "/api";
 
 // ===== دوال مساعدة عامة =====
@@ -183,7 +190,9 @@ const editProfileModal = document.getElementById("editProfileModal");
 const closeEditProfileModalBtn = document.getElementById(
   "closeEditProfileModal"
 );
+const editFullNameInput = document.getElementById("editFullNameInput");
 const editUsernameInput = document.getElementById("editUsernameInput");
+const editProfileFab = document.getElementById("editProfileFab");
 const editBioInput = document.getElementById("editBioInput");
 const editLocationInput = document.getElementById("editLocationInput");
 const editWebsiteInput = document.getElementById("editWebsiteInput");
@@ -339,6 +348,7 @@ async function fetchProfileData() {
 
     viewedProfileData = data;
     viewedProfileId = data._id || urlUserId || currentUserId;
+    window.CURRENT_PROFILE_PUBLIC_ID = data.publicId || "";
 
     // 🔐 تحديث حالة الحساب الخاص
     viewedProfileIsPrivate = !!data.isPrivate;
@@ -415,7 +425,7 @@ if (profileMenuMessageBtn && !isMe) {
 
 // ===== رسم هيدر البروفايل =====
 function renderProfileHeader(user) {
-  const username = user.username || user.name || "مستخدم";
+  const username = user.fullName || user.name || user.username || "مستخدم";
   const handle = "@" + (user.username || "user");
   const joined = user.createdAt ? formatTime(user.createdAt) : "";
 
@@ -427,6 +437,9 @@ function renderProfileHeader(user) {
   profileHandleEl.textContent = handle;
 
   let metaText = joined ? `انضم في ${joined}` : "";
+  if (user.publicId) {
+    metaText = metaText ? `${metaText} · ${user.publicId}` : user.publicId;
+  }
   if (user.isPrivate) {
     metaText = metaText ? `${metaText} · حساب خاص` : "حساب خاص";
   }
@@ -640,7 +653,7 @@ function renderProfilePosts(mode) {
 function renderPostCard(post) {
   const postUser = post.user || null;
   const userName =
-    (postUser && (postUser.username || postUser.name)) ||
+    (postUser && (postUser.fullName || postUser.name || postUser.username)) ||
     post.authorName ||
     "مستخدم";
   const firstChar = userName.trim()[0]
@@ -690,7 +703,7 @@ function renderPostCard(post) {
           .map((c) => {
             const cuObj = c.user || null;
             const cu =
-              (cuObj && (cuObj.username || cuObj.name)) || "مستخدم";
+              (cuObj && (cuObj.fullName || cuObj.name || cuObj.username)) || "مستخدم";
             const cf = cu.trim()[0] ? cu.trim()[0].toUpperCase() : "م";
             const ctext = escapeHtml(c.text || "");
 
@@ -744,7 +757,7 @@ function renderPostCard(post) {
                 </div>
               `;
             }
-            const ln = u.username || u.name || "مستخدم";
+            const ln = u.fullName || u.name || u.username || "مستخدم";
             const lf = ln.trim()[0] ? ln.trim()[0].toUpperCase() : "م";
             const uId = u._id || "";
             return `
@@ -1105,6 +1118,9 @@ function openEditProfileModal() {
   if (!isMe) return;
   if (!viewedProfileData) return;
 
+  if (editFullNameInput)
+    editFullNameInput.value =
+      viewedProfileData.fullName || viewedProfileData.name || "";
   editUsernameInput.value = viewedProfileData.username || "";
   if (editBioInput) editBioInput.value = viewedProfileData.bio || "";
   if (editLocationInput)
@@ -1130,6 +1146,11 @@ function closeEditProfileModal() {
 
 if (editProfileBtn && editProfileModal && isMe) {
   editProfileBtn.addEventListener("click", openEditProfileModal);
+}
+
+if (editProfileFab) {
+  editProfileFab.style.display = isMe ? "flex" : "none";
+  editProfileFab.addEventListener("click", openEditProfileModal);
 }
 
 if (closeEditProfileModalBtn) {
@@ -1162,6 +1183,7 @@ if (saveProfileBtn) {
       if (!token) throw new Error("يجب تسجيل الدخول أولاً");
 
       const formData = new FormData();
+      const fullName = editFullNameInput ? editFullNameInput.value.trim() : "";
       const username = editUsernameInput.value.trim();
       const bio = editBioInput ? editBioInput.value.trim() : "";
       const location = editLocationInput
@@ -1171,7 +1193,13 @@ if (saveProfileBtn) {
         ? editWebsiteInput.value.trim()
         : "";
 
-      if (username) formData.append("username", username);
+      if (fullName) formData.append("fullName", fullName);
+      if (username) {
+        if (!/^[A-Za-z0-9_]{3,}$/.test(username)) {
+          throw new Error("اسم المستخدم يجب أن يكون بالإنكليزي ويحتوي على حروف/أرقام/_.");
+        }
+        formData.append("username", username);
+      }
       if (bio) formData.append("bio", bio);
       if (location) formData.append("location", location);
       if (website) formData.append("website", website);
@@ -1206,8 +1234,9 @@ if (saveProfileBtn) {
         ...apiUser,
         id: apiUser._id || stored.id,
         _id: apiUser._id || stored._id,
-        name: apiUser.username || stored.name,
+        name: apiUser.fullName || apiUser.username || stored.name,
         username: apiUser.username || stored.username,
+        fullName: apiUser.fullName || stored.fullName,
         avatar: apiUser.avatar || "",
         bio: apiUser.bio || "",
         location: apiUser.location || "",
@@ -1357,11 +1386,11 @@ function buildListUserElement(user, options = {}) {
 
   const uObj = typeof user === "object" && user !== null ? user : {};
   const userId = uObj._id || uObj.id || (typeof user === "string" ? user : "");
-  const userName = uObj.username || uObj.name || "مستخدم";
-  const handle =
-    (uObj.username && "@" + uObj.username) ||
-    (uObj.email ? uObj.email : "") ||
-    "";
+  const userName = uObj.fullName || uObj.name || uObj.username || "مستخدم";
+    const handle =
+      (uObj.username && "@" + uObj.username) ||
+      (uObj.publicId ? uObj.publicId : "") ||
+      "";
   const firstChar = userName.trim()[0]
     ? userName.trim()[0].toUpperCase()
     : "م";

@@ -191,7 +191,7 @@ function updatePublishButtonState() {
   const user = getUser();
   if (!user) return;
 
-  const name = user.name || user.username || user.email || "مستخدم";
+    const name = user.name || user.fullName || user.username || user.publicId || "مستخدم";
   const firstChar = name.trim()[0] ? name.trim()[0].toUpperCase() : "م";
 
   if (welcomeUserAvatar) welcomeUserAvatar.textContent = firstChar;
@@ -273,6 +273,10 @@ function initSingleVideoWrapper(wrapper) {
   const video = wrapper.querySelector("video");
   if (!video) return;
 
+  // إعدادات autoplay آمنة
+  video.muted = true;
+  video.playsInline = true;
+
   // سرعة افتراضية
   wrapper.dataset.speedIndex = "0";
   video.playbackRate = 1;
@@ -329,6 +333,58 @@ function initVideoPlayers() {
   });
 }
 
+// ===== تشغيل/إيقاف تلقائي عند المرور =====
+let videoObserver = null;
+let userInteracted = false;
+
+document.addEventListener(
+  "pointerdown",
+  function () {
+    if (userInteracted) return;
+    userInteracted = true;
+    // فكّ الكتم عن كل فيديو ظاهر
+    document.querySelectorAll(".sae-video-shell .sae-video").forEach(function (v) {
+      v.muted = false;
+    });
+  },
+  { once: true }
+);
+
+function initVideoAutoplay() {
+  if (!postsDiv || !("IntersectionObserver" in window)) return;
+
+  if (videoObserver) {
+    videoObserver.disconnect();
+  }
+
+  videoObserver = new IntersectionObserver(
+    function (entries) {
+      entries.forEach(function (entry) {
+        const wrapper = entry.target;
+        const video = wrapper.querySelector("video");
+        if (!video) return;
+
+        if (entry.isIntersecting) {
+          if (wrapper.dataset.userPaused === "1") return;
+          video.muted = !userInteracted;
+          video.play().then(function () {
+            wrapper.classList.add("is-playing");
+          }).catch(function () {});
+        } else {
+          video.pause();
+          wrapper.classList.remove("is-playing");
+        }
+      });
+    },
+    { threshold: 0.6 }
+  );
+
+  const wrappers = postsDiv.querySelectorAll(".sae-video-shell");
+  wrappers.forEach(function (wrapper) {
+    videoObserver.observe(wrapper);
+  });
+}
+
 // 🔹 أحداث الميديا والرابط داخل المودال
 if (modalAddMediaBtn && postMediaInput) {
   modalAddMediaBtn.addEventListener("click", function () {
@@ -361,6 +417,8 @@ if (postMediaInput) {
                 class="sae-video"
                 src="${escapeAttr(url)}"
                 preload="metadata"
+                muted
+                playsinline
               ></video>
 
               <!-- شريط التقدم -->
@@ -544,7 +602,7 @@ function formatTime(iso) {
 function renderPostCard(post) {
   const postUser = post.user || null;
   const userName =
-    (postUser && (postUser.username || postUser.name)) ||
+    (postUser && (postUser.fullName || postUser.name || postUser.username)) ||
     post.authorName ||
     "مستخدم";
 
@@ -572,6 +630,15 @@ function renderPostCard(post) {
 
   const likesCount = likesArray.length;
   const commentsCount = commentsArray.length;
+
+  const isLiked = currentUserId
+    ? likesArray.some(function (u) {
+        if (!u) return false;
+        if (typeof u === "string") return String(u) === String(currentUserId);
+        const uid = u._id || u.id || u.userId;
+        return uid ? String(uid) === String(currentUserId) : false;
+      })
+    : false;
 
   const imageUrl = buildMediaUrl(post.imageUrl);
   const videoUrl = buildMediaUrl(post.videoUrl);
@@ -634,6 +701,8 @@ function renderPostCard(post) {
           class="sae-video"
           src="${escapeAttr(videoUrl)}"
           preload="metadata"
+          muted
+          playsinline
         ></video>
 
         <!-- شريط التقدم -->
@@ -707,7 +776,7 @@ function renderPostCard(post) {
           .map(function (c) {
             const cuObj = c.user || null;
             const cu =
-              (cuObj && (cuObj.username || cuObj.name)) || "مستخدم";
+              (cuObj && (cuObj.fullName || cuObj.name || cuObj.username)) || "مستخدم";
             const cf = cu.trim()[0] ? cu.trim()[0].toUpperCase() : "م";
             const ctext = escapeHtml(c.text || "");
 
@@ -765,7 +834,7 @@ function renderPostCard(post) {
                 </div>
               `;
             }
-            const ln = u.username || u.name || "مستخدم";
+            const ln = u.fullName || u.name || u.username || "مستخدم";
             const lf = ln.trim()[0] ? ln.trim()[0].toUpperCase() : "م";
             const uId = u._id || "";
             return `
@@ -814,8 +883,8 @@ function renderPostCard(post) {
           <span class="comments-count clickable">${commentsCount} تعليق</span>
         </div>
         <div class="post-actions-row">
-          <button class="post-action-btn" data-action="like">
-            <i class="fa-regular fa-heart"></i>
+          <button class="post-action-btn ${isLiked ? "liked" : ""}" data-action="like">
+            <i class="${isLiked ? "fa-solid" : "fa-regular"} fa-heart"></i>
             <span>إعجاب</span>
           </button>
           <button class="post-action-btn" data-action="comment">
@@ -901,6 +970,7 @@ async function loadPosts() {
 
     postsDiv.innerHTML = visiblePosts.map(renderPostCard).join("");
     initVideoPlayers();
+    initVideoAutoplay();
   } catch (err) {
     console.error(err);
     postsDiv.innerHTML =
@@ -1122,9 +1192,13 @@ function handleGlobalVideoClick(e) {
   // زر التشغيل أو الضغط على الفيديو نفسه
   if (playBtn || videoClicked) {
     if (video.paused) {
+      wrapper.dataset.userPaused = "0";
+      userInteracted = true;
+      video.muted = false;
       video.play();
       wrapper.classList.add("is-playing");
     } else {
+      wrapper.dataset.userPaused = "1";
       video.pause();
       wrapper.classList.remove("is-playing");
     }

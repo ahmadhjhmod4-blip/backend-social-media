@@ -210,7 +210,7 @@ async function fetchStoriesFeed() {
         (s.user && (s.user._id || s.user.id)) ||
         null,
       userName:
-        (s.user && (s.user.username || s.user.name)) ||
+        (s.user && (s.user.fullName || s.user.name || s.user.username)) ||
         s.userName ||
         "مستخدم Saepel",
       avatar: s.avatar || (s.user && s.user.avatar) || "",
@@ -250,6 +250,8 @@ function renderStoriesRow() {
     card.className = "story-card glass";
     if (story.viewed) {
       card.classList.add("viewed");
+    } else {
+      card.classList.add("unviewed");
     }
     card.dataset.index = index.toString();
 

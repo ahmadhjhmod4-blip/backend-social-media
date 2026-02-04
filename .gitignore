@@ -7,3 +7,5 @@ public.zip
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+# Ignore uploads (user-generated files)
+/uploads/

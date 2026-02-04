@@ -361,7 +361,27 @@
     <script>
       // ✅ نستخدم نفس الأصل (origin) اللي الصفحة شغّالة منه
       // مثلاً: http://localhost:5000 أو https://your-app.onrender.com
-      const API_BASE = window.location.origin + "/api";
+      // ✅ API_BASE ذكي: يشتغل مع Cloudflare Tunnel، ومع تشغيل الفرونت من بورت مختلف، وحتى لو فتحت الصفحة كـ file://
+// تقدر كمان تفرضه يدويًا:
+// localStorage.setItem("API_BASE","https://xxxxx.trycloudflare.com/api")
+function resolveApiBase() {
+  const stored = (localStorage.getItem("API_BASE") || "").trim();
+  if (stored) return stored.replace(/\/+$/, "");
+
+  // لو الصفحة فتحتها file:// (بدون سيرفر)، لازم نحدد API يدويًا
+  if (window.location.protocol === "file:") {
+    return "http://localhost:5000/api";
+  }
+
+  // لو الفرونت على بورت مختلف عن الباك (مثلاً 5173/5500) واسم المضيف localhost
+  if (window.location.hostname === "localhost" && window.location.port !== "5000") {
+    return "http://localhost:5000/api";
+  }
+
+  // الحالة الطبيعية: نفس الأصل
+  return window.location.origin + "/api";
+}
+const API_BASE = resolveApiBase();
 
       const loginForm = document.getElementById("loginForm");
       const loginMessage = document.getElementById("loginMessage");
@@ -410,10 +430,16 @@
             body: JSON.stringify({ identifier, password }),
           });
 
-          const data = await res.json();
-
-          if (!res.ok) {
-            showLoginMessage(data.msg || "خطأ في تسجيل الدخول.", "error");
+          let data = null;
+      const ct = (res.headers.get("content-type") || "").toLowerCase();
+      const rawText = await res.text();
+      if (ct.includes("application/json")) {
+        try { data = JSON.parse(rawText); } catch { data = null; }
+      }
+      // لو رجع HTML أو نص، نخليه كرسالة
+      const textMsg = (data && (data.msg || data.message)) ? (data.msg || data.message) : rawText;
+if (!res.ok) {
+            showLoginMessage(String((data && (data.msg||data.message)) || textMsg) || "خطأ في تسجيل الدخول.", "error");
           } else {
             // خزن التوكن واليوزر
             if (data.token) localStorage.setItem("token", data.token);
@@ -425,14 +451,14 @@
               "success"
             );
 
-            // تحويل للصفحة الرئيسية (index.html)
+            // تحويل للصفحة الرئيسية (home.html)
             setTimeout(() => {
-              window.location.href = "/"; // السيرفر بيرجع index.html على "/"
+              window.location.href = "home.html"; // السيرفر بيرجع home.html على "/"
             }, 800);
           }
         } catch (err) {
           console.error(err);
-          showLoginMessage("حدث خطأ غير متوقع، حاول مرة أخرى.", "error");
+          showLoginMessage("حدث خطأ غير متوقع. تأكد أن الرابط يشغّل الباك-إند وأن API_BASE صحيح: " + API_BASE, "error");
         } finally {
           loginBtn.disabled = false;
           loginBtn.textContent = "تسجيل الدخول";

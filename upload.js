@@ -1,23 +1,31 @@
 // upload.js — مسؤول عن رفع الملفات (صور / فيديو / صوت) (ES Module)
+// ✅ تنظيم التخزين: حفظ مرفقات كل مستخدم داخل:
+// uploads/users/<userId>/
+// ✅ يدعم تغيير مسار uploads عبر ENV: UPLOADS_DIR (مثلاً على القرص D)
+
+import dotenv from "dotenv";
+dotenv.config();
 
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-// ✅ نخلي مجلد الرفع ثابت على جذر تشغيل السيرفر (project root)
-// هذا يحل مشكلة 404 لأن /uploads لازم يطابق نفس المجلد اللي نحفظ فيه فعلياً.
-// ✅ على Render (وأي استضافة) الأفضل نخلي مجلد uploads قابل للتخصيص عبر ENV
-// مثال Render Persistent Disk:
-// UPLOADS_DIR=/var/data/uploads
+// ✅ مجلد الرفع الأساسي (Base)
 export const uploadsDir = process.env.UPLOADS_DIR
   ? path.resolve(process.env.UPLOADS_DIR)
   : path.join(process.cwd(), "uploads");
 
-// ✅ أنشئ المجلد إذا مش موجود (يمنع ENOENT)
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-  console.log("📁 تم إنشاء مجلد uploads تلقائياً:", uploadsDir);
+function ensureDirSync(dirPath) {
+  try {
+    if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
+  } catch (e) {
+    // لا تكسر التشغيل لو فشل إنشاء المجلد (نطبع فقط)
+    console.error("❌ Failed to create uploads directory:", dirPath, e?.message || e);
+  }
 }
+
+// ✅ أنشئ المجلد الأساسي إذا مش موجود (يمنع ENOENT)
+ensureDirSync(uploadsDir);
 
 // ✅ خريطة امتدادات حسب mime (لتسجيلات الصوت خصوصاً)
 const mimeToExt = {
@@ -43,10 +51,22 @@ const mimeToExt = {
   "image/avif": ".avif",
 };
 
+// ✅ تنظيم المسار حسب المستخدم: uploads/users/<userId>
+function getUserUploadsDir(userId) {
+  const uid = String(userId || "").trim();
+  if (!uid) return uploadsDir;
+  return path.join(uploadsDir, "users", uid);
+}
+
 // إعداد طريقة التخزين
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadsDir);
+    // ✅ إذا موجود req.userId (من authMiddleware) نخزن داخل users/<id>
+    const userId = req?.userId ? String(req.userId) : "";
+    const dest = getUserUploadsDir(userId);
+
+    ensureDirSync(dest);
+    cb(null, dest);
   },
   filename: (req, file, cb) => {
     const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);

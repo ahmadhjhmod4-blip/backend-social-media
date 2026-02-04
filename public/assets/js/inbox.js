@@ -1679,7 +1679,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function normalizeWizardUser(u) {
     const id = String(u?._id || u?.id || "");
     const username = u?.username || u?.name || u?.fullName || "User";
-    const sub = u?.fullName || u?.email || "";
+      const sub = u?.fullName || u?.publicId || "";
     const avatar = buildAvatarUrl(u?.avatar || u?.profilePic || u?.photo || "");
     return { id, username: String(username), sub: String(sub), avatar };
   }
@@ -2857,7 +2857,7 @@ try {
         ? (conv?.title || conv?.name || conv?.channelName || "قناة")
         : itemType === "group"
         ? (conv?.title || conv?.name || conv?.groupName || "مجموعة")
-        : (other && (other.username || other.email)) || "مستخدم Saepel";
+          : (other && (other.username || other.publicId)) || "مستخدم Saepel";
 
     const name = escapeHtml(rawName);
 
@@ -3920,7 +3920,7 @@ function setSelectBarVisible(visible) {
       items.forEach((conv) => {
         const other = getOtherParticipant(conv);
         const otherId = other ? other._id || other.id : null;
-        const name = (other && (other.username || other.email)) || "مستخدم Saepel";
+        const name = (other && (other.username || other.publicId)) || "مستخدم Saepel";
         if (query && !String(name).toLowerCase().includes(query)) return;
 
         const avatarUrl = other && other.avatar ? buildAvatarUrl(other.avatar) : "";
@@ -4295,7 +4295,7 @@ function setSelectBarVisible(visible) {
       const conv = await startConversationWithUser(userId);
       const other = getOtherParticipant(conv);
 
-      const name = (other && (other.username || other.email)) || "مستخدم Saepel";
+      const name = (other && (other.username || other.publicId)) || "مستخدم Saepel";
       const avatarUrl = other && other.avatar ? buildAvatarUrl(other.avatar) : "";
 
       openConversationUI({
@@ -4331,9 +4331,9 @@ function setSelectBarVisible(visible) {
   const goHomeOrBack = () => {
     try {
       if (window.history.length > 1) window.history.back();
-      else window.location.href = "./index.html";
+      else window.location.href = "./home.html";
     } catch {
-      window.location.href = "./index.html";
+      window.location.href = "./home.html";
     }
   };
 
@@ -4439,7 +4439,7 @@ function setSelectBarVisible(visible) {
       console.log("[Inbox] chatExitBtn clicked");
 
       if (window.history.length > 1) window.history.back();
-      else window.location.href = "./index.html";
+      else window.location.href = "./home.html";
     });
                   clearReplyDraft();
               } else {

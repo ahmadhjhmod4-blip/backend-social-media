@@ -395,7 +395,11 @@ if (pmMessageBtn) {
 if (pmCopyProfileBtn) {
   pmCopyProfileBtn.addEventListener("click", async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      const pid = window.CURRENT_PROFILE_PUBLIC_ID || "";
+      const link = pid
+        ? `${window.location.origin}/profile.html?userId=${encodeURIComponent(pid)}`
+        : window.location.href;
+      await navigator.clipboard.writeText(link);
       pmNotify("تم نسخ رابط البروفايل ✔", "success");
     } catch {
       pmNotify("تعذر نسخ الرابط ❌", "error");

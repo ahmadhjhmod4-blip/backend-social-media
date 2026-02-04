@@ -16,9 +16,11 @@ router.get("/test", (req, res) => {
 // انتبه: هون المسار "/register" فقط بدون /api
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { username, name, email, password, birthdate, birthDate } = req.body;
+    const finalUsername = (username || name || "").trim();
+    const finalBirthdate = birthdate || birthDate;
 
-    if (!name || !email || !password) {
+    if (!finalUsername || !email || !password) {
       return res.status(400).json({ msg: "يرجى تعبئة جميع البيانات" });
     }
 
@@ -31,9 +33,10 @@ router.post("/register", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const newUser = new User({
-      name,
+      username: finalUsername,
       email,
       password: hashedPassword,
+      birthdate: finalBirthdate,
     });
 
     await newUser.save();
@@ -69,7 +72,7 @@ router.post("/login", async (req, res) => {
 
     const token = jwt.sign(
       { id: user._id },
-      "SECRET_KEY_CHANGE_ME",
+      process.env.JWT_SECRET || "DEV_SECRET_CHANGE_ME",
       { expiresIn: "7d" }
     );
 
@@ -78,7 +81,7 @@ router.post("/login", async (req, res) => {
       token,
       user: {
         id: user._id,
-        name: user.name,
+        name: user.username || user.name,
         email: user.email,
       },
     });

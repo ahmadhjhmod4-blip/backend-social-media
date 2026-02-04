@@ -1,876 +1,262 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <title>Saepel - الرئيسية</title>
+    <title>Saepel - مرحبًا بك</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <!-- أيقونات Font Awesome -->
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
     />
-
-    <!-- ملف التصميم الرئيسي -->
     <link rel="stylesheet" href="assets/css/style.css" />
-    <!-- ⭐ ملف تصميم قائمة الثلاث نقاط -->
-    <link rel="stylesheet" href="assets/css/postMenu.css" />
-    <!-- ⭐ ملف تصميم القصص -->
-    <link rel="stylesheet" href="assets/css/stories.css" />
+    <style>
+      .welcome-wrap {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px 14px 40px;
+      }
+      .welcome-card {
+        width: 100%;
+        max-width: 820px;
+        padding: 28px 26px 30px;
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 20px;
+      }
+      .welcome-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .welcome-logo {
+        width: 44px;
+        height: 44px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 20px;
+      }
+      .welcome-title {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+      .welcome-sub {
+        font-size: 13px;
+        opacity: 0.75;
+        margin-bottom: 16px;
+      }
+      .welcome-text {
+        font-size: 14px;
+        line-height: 1.9;
+        opacity: 0.9;
+      }
+      .welcome-actions {
+        margin-top: 18px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .welcome-btn {
+        flex: 1 1 160px;
+        border-radius: 999px;
+        padding: 10px 16px;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+      }
+      .welcome-btn.secondary {
+        background: transparent;
+        border: 1px solid rgba(199, 174, 140, 0.6);
+        color: inherit;
+      }
+      .start-btn {
+        margin-top: 6px;
+      }
+      .welcome-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .welcome-item {
+        padding: 10px 12px;
+        border-radius: 16px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .welcome-item i {
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.7);
+      }
+      .auth-section {
+        margin-top: 18px;
+        padding-top: 8px;
+        border-top: 1px dashed rgba(199, 174, 140, 0.45);
+      }
+      @media (max-width: 720px) {
+        .welcome-card {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
   </head>
-  <body>
-    <!-- خلفية orbs -->
+  <body class="theme-beige">
+    <script>
+      (function guardWelcome() {
+        const token =
+          localStorage.getItem("token") ||
+          localStorage.getItem("jwt") ||
+          localStorage.getItem("SAEPEL_TOKEN") ||
+          "";
+        if (token) {
+          window.location.replace("home.html");
+        }
+      })();
+    </script>
+
     <div class="bg-orbs">
       <div class="bg-orb orb-1"></div>
       <div class="bg-orb orb-2"></div>
       <div class="bg-orb orb-3"></div>
     </div>
 
-    <div class="app-shell">
-      <!-- شريط علوي -->
-      <header class="top-nav glass">
-        <!-- زر القائمة + لوجو -->
-        <div class="logo-area">
-          <!-- زر القائمة الجانبية الجديد -->
-          <button
-            class="icon-btn"
-            id="mainMenuBtn"
-            type="button"
-            title="القائمة"
-            aria-label="القائمة"
-          >
-            <i class="fa-solid fa-bars"></i>
-          </button>
-
-          <div class="logo-icon">S</div>
-          <div class="logo-text">
-            <span>Saepel</span>
-            <span>شبكتك الاجتماعية العصرية</span>
-          </div>
-        </div>
-
-        <div class="nav-center">
-          <div class="nav-search">
-            <input
-              type="text"
-              id="searchInput"
-              placeholder="ابحث عن أشخاص أو منشورات..."
-            />
-            <i class="fa-solid fa-magnifying-glass"></i>
-          </div>
-        </div>
-
-        <div class="nav-actions">
-          <!-- ✅ زر الرسائل مع id -->
-          <button
-            class="icon-btn"
-            title="الرسائل"
-            id="topMessagesBtn"
-            type="button"
-          >
-            <i class="fa-regular fa-message"></i>
-          </button>
-        </div>
-      </header>
-
-      <!-- ✅ صف القصص -->
-      <section class="stories-row">
-        <!-- كرت إضافة قصة -->
-        <div class="story-card glass story-add" id="storyAdd">
-          <div class="story-inner">
-            <div class="story-avatar story-add-avatar">
-              <i class="fa-solid fa-plus"></i>
-            </div>
-            <div class="story-label">إضافة قصة</div>
-          </div>
-        </div>
-
-        <!-- هنا رح نرسم القصص ديناميكياً من JS -->
-        <div class="stories-scroll" id="storiesList"></div>
-      </section>
-
-      <!-- العمود الرئيسي -->
-      <main class="main-column">
-        <!-- إنشاء منشور -->
-        <section class="create-post-card glass">
-          <div class="create-post-top">
-            <div class="avatar-lg" id="currentUserAvatar">A</div>
-            <div class="fake-input" id="openCreateModal">
-              <span id="createPlaceholder">شو حابب تشارك اليوم؟</span>
-              <i class="fa-regular fa-pen-to-square"></i>
-            </div>
-          </div>
-
-          <div class="create-post-actions">
-            <button class="cp-btn" id="cpMedia">
-              <i class="fa-solid fa-photo-film"></i>
-              <span>صورة / فيديو</span>
-            </button>
-            <button class="cp-btn" id="cpLink">
-              <i class="fa-solid fa-link"></i>
-              <span>رابط</span>
-            </button>
-            <button class="cp-btn">
-              <i class="fa-regular fa-face-smile"></i>
-              <span>حالة</span>
-            </button>
-          </div>
-
-          <!-- رسائل النجاح / الخطأ -->
-          <div id="createMsg" class="create-msg"></div>
-        </section>
-
-        <!-- هنا JS رح يعرض المنشورات من الباك إند -->
-        <div id="posts"></div>
-      </main>
-    </div>
-
-    <!-- زر عائم (ديسكتوب فقط) -->
-    <button class="fab-new-post" id="fabOpen">
-      <i class="fa-solid fa-plus"></i>
-    </button>
-
-    <!-- شريط سفلي للجوال -->
-    <nav class="bottom-nav glass">
-      <div class="bottom-nav-btn active" data-nav="home" id="bottomHome">
-        <i class="fa-solid fa-house"></i>
-        <span>الرئيسية</span>
-      </div>
-      <div class="bottom-nav-btn">
-        <i class="fa-solid fa-clapperboard-play"></i>
-        <span>ريلز</span>
-      </div>
-      <div class="bottom-nav-btn add-btn" id="bottomAdd">
-        <i class="fa-solid fa-circle-plus"></i>
-        <span>منشور</span>
-      </div>
-      <div class="bottom-nav-btn">
-        <i class="fa-regular fa-bell"></i>
-        <span>إشعارات</span>
-      </div>
-      <div class="bottom-nav-btn" id="bottomProfile">
-        <i class="fa-regular fa-user"></i>
-        <span>بروفايل</span>
-      </div>
-    </nav>
-
-    <!-- مودال إنشاء منشور -->
-    <div class="modal-overlay" id="createPostModal">
-      <div class="modal glass soft-shadow">
-        <div class="modal-header">
-          <div class="modal-title">إنشاء منشور</div>
-          <button class="modal-close" id="closeModalBtn">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-
-        <div class="modal-body">
-          <div class="modal-user">
-            <div class="avatar-lg" id="modalUserAvatar">A</div>
-            <div class="modal-user-info">
-              <span id="modalUserName">مستخدم</span>
-              <span class="privacy-pill" id="privacyToggle">
-                <i class="fa-solid fa-earth-asia"></i>
-                عام
-              </span>
-            </div>
-          </div>
-
-          <textarea id="postText" placeholder="شو حابب تكتب؟"></textarea>
-
-          <div class="modal-media-row">
-            <button
-              class="modal-media-btn"
-              id="modalAddMediaBtn"
-              type="button"
-              style="
-                background: linear-gradient(135deg, #6e4aff, #00d1ff);
-                border: none;
-              "
-            >
-              <i class="fa-solid fa-photo-film"></i>
-              <span>إضافة صورة / فيديو</span>
-            </button>
-            <button
-              class="modal-media-btn"
-              id="modalAddLinkBtn"
-              type="button"
-              style="
-                background: linear-gradient(135deg, #22c55e, #06b6d4);
-                border: none;
-              "
-            >
-              <i class="fa-solid fa-link"></i>
-              <span>إضافة رابط</span>
-            </button>
-          </div>
-
-          <input
-            type="file"
-            id="postMediaInput"
-            accept="image/*,video/*"
-            style="display: none"
-          />
-
-          <div id="postMediaPreview"></div>
-
-          <input
-            type="url"
-            id="postLinkInput"
-            class="text-input"
-            placeholder="يمكنك إضافة رابط (اختياري)"
-          />
-
-          <div class="modal-footer">
-            <button class="btn-primary" id="publishBtn" disabled>نشر</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ✅ مودال إنشاء ستوري -->
-    <div class="story-create-overlay" id="storyCreateOverlay">
-      <div class="story-create-modal">
-        <div class="sc-header">
-          <h3>إنشاء ستوري</h3>
-          <button class="sc-close" id="scCloseBtn" type="button">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-
-        <div class="sc-tabs">
-          <button
-            class="sc-tab sc-tab-active"
-            data-tab="media"
-            type="button"
-          >
-            صورة / فيديو
-          </button>
-          <!-- جاهز لاحقاً لو حبّينا نفعّل "نص فقط" -->
-          <button class="sc-tab" data-tab="text" type="button" style="display:none;">
-            نص فقط
-          </button>
-        </div>
-
-        <!-- تبويب الصورة/الفيديو -->
-        <div class="sc-body sc-body-active" id="scMediaTab">
-          <label class="sc-upload-label">
-            <input
-              type="file"
-              id="scFileInput"
-              accept="image/*,video/*"
-              hidden
-            />
-            <i class="fa-solid fa-cloud-arrow-up"></i>
-            <span>اختر صورة أو فيديو من جهازك</span>
-          </label>
-
-          <div class="sc-preview" id="scPreview">
-            <span class="sc-preview-placeholder">
-              ستظهر المعاينة هنا بعد اختيار الملف
-            </span>
-          </div>
-        </div>
-
-        <!-- تبويب النص فقط (غير مفعّل حالياً) -->
-        <div class="sc-body" id="scTextTab">
-          <textarea
-            id="scTextInput"
-            class="sc-textarea"
-            placeholder="اكتب نص الستوري هنا..."
-          ></textarea>
-          <div class="sc-text-preview">
-            <div class="sc-text-story" id="scTextStoryPreview">
-              اكتب شيئاً جميلاً ✨
-            </div>
-          </div>
-        </div>
-
-        <div class="sc-footer">
-          <button class="sc-submit-btn" id="scSubmitBtn" type="button">
-            نشر الستوري
-          </button>
-        </div>
-      </div>
-    </div>
-    <!-- ✅ نهاية مودال إنشاء ستوري -->
-
-    <!-- ===== قائمة Saepel الجانبية ===== -->
-    <div class="side-menu-overlay" id="sideMenu">
-      <div class="side-menu glass soft-shadow">
-        <div class="side-menu-header">
-          <div class="menu-user">
-            <div class="avatar-sm" id="welcomeUser">A</div>
-            <div class="menu-user-info">
-              <span id="menuUserName">مستخدم Saepel</span>
-              <span class="menu-user-hint">مرحباً بك 👋</span>
-            </div>
-          </div>
-
-          <button class="close-menu" id="closeMenuBtn" type="button">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-
-        <ul class="menu-list">
-          <li class="menu-item" data-action="profile">
-            <i class="fa-solid fa-user"></i>
-            <span>ملفي الشخصي</span>
-          </li>
-          <li class="menu-item" data-action="analytics">
-            <i class="fa-solid fa-chart-line"></i>
-            <span>تحليلات الحساب</span>
-          </li>
-          <li class="menu-item" data-action="saved" id="menuSaved">
-            <i class="fa-regular fa-bookmark"></i>
-            <span>المحفوظات (Saved)</span>
-          </li>
-          <li class="menu-item" data-action="messenger">
-            <i class="fa-solid fa-comments"></i>
-            <span>Messenger الدردشة</span>
-          </li>
-          <li class="menu-item" data-action="explore">
-            <i class="fa-solid fa-compass"></i>
-            <span>استكشاف (Explore)</span>
-          </li>
-          <li class="menu-item" data-action="play">
-            <i class="fa-solid fa-gamepad"></i>
-            <span>Saepel Play</span>
-          </li>
-          <li class="menu-item" data-action="media">
-            <i class="fa-solid fa-photo-film"></i>
-            <span>مدير الوسائط</span>
-          </li>
-          <li class="menu-item" data-action="drafts">
-            <i class="fa-solid fa-file-pen"></i>
-            <span>المسودات (Drafts)</span>
-          </li>
-          <li class="menu-item" data-action="security">
-            <i class="fa-solid fa-shield-halved"></i>
-            <span>مركز الأمان</span>
-          </li>
-          <li class="menu-item" data-action="personalization">
-            <i class="fa-solid fa-palette"></i>
-            <span>التخصيص والمظهر</span>
-          </li>
-          <li class="menu-item" data-action="verification">
-            <i class="fa-solid fa-circle-check"></i>
-            <span>توثيق الحساب</span>
-          </li>
-          <li class="menu-item" data-action="points">
-            <i class="fa-solid fa-coins"></i>
-            <span>نقاط Saepel</span>
-          </li>
-          <li class="menu-item" data-action="settings">
-            <i class="fa-solid fa-gear"></i>
-            <span>الإعدادات</span>
-          </li>
-          <li class="menu-item menu-item-danger" data-action="logout">
-            <i class="fa-solid fa-right-from-bracket"></i>
-            <span>تسجيل الخروج</span>
-          </li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- ⭐⭐ Popup قائمة خيارات المنشور ⭐⭐ -->
-    <div class="post-menu-overlay" id="postMenuOverlay">
-      <div class="post-menu-modal">
-        <div class="post-menu-header">
-          <span>خيارات المنشور</span>
-          <button class="post-menu-close" id="postMenuCloseBtn">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-
-        <div class="post-menu-options">
-          <!-- لصاحب المنشور فقط -->
-          <button class="post-menu-item owner-only" data-action="edit">
-            <i class="fa-regular fa-pen-to-square"></i>
-            <span>تعديل المنشور</span>
-          </button>
-
-          <button
-            class="post-menu-item owner-only danger"
-            data-action="delete"
-          >
-            <i class="fa-regular fa-trash-can"></i>
-            <span>حذف المنشور</span>
-          </button>
-
-          <!-- للجميع لكن تحتاج وسائط -->
-          <button
-            class="post-menu-item has-media"
-            data-action="downloadMedia"
-          >
-            <i class="fa-regular fa-circle-down"></i>
-            <span>تحميل الصورة / الفيديو</span>
-          </button>
-
-          <!-- للجميع -->
-          <button class="post-menu-item" data-action="copyLink">
-            <i class="fa-solid fa-link"></i>
-            <span>نسخ رابط المنشور</span>
-          </button>
-
-          <button class="post-menu-item" data-action="copyText">
-            <i class="fa-regular fa-copy"></i>
-            <span>نسخ نص المنشور</span>
-          </button>
-
-          <!-- لغير صاحب المنشور فقط -->
-          <button
-            class="post-menu-item not-owner-only"
-            data-action="report"
-          >
-            <i class="fa-regular fa-flag"></i>
-            <span>الإبلاغ عن هذا المنشور</span>
-          </button>
-
-          <button
-            class="post-menu-item not-owner-only"
-            data-action="hidePost"
-          >
-            <i class="fa-regular fa-eye-slash"></i>
-            <span>إخفاء هذا المنشور</span>
-          </button>
-
-          <button
-            class="post-menu-item not-owner-only"
-            data-action="unfollowUser"
-          >
-            <i class="fa-regular fa-user-xmark"></i>
-            <span>إلغاء متابعة صاحب المنشور</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ⭐⭐ مودال تأكيد حذف المنشور ⭐⭐ -->
-    <div class="post-delete-overlay" id="postDeleteOverlay">
-      <div class="post-delete-modal">
-        <div class="post-delete-icon">
-          <i class="fa-solid fa-triangle-exclamation"></i>
-        </div>
-        <h2 class="post-delete-title">حذف المنشور؟</h2>
-        <p class="post-delete-text">
-          لن تتمكن من استعادة هذا المنشور بعد حذفه. هل أنت متأكد؟
-        </p>
-        <div class="post-delete-actions">
-          <button
-            type="button"
-            class="post-delete-btn cancel"
-            id="cancelDeleteBtn"
-          >
-            إلغاء
-          </button>
-          <button
-            type="button"
-            class="post-delete-btn confirm"
-            id="confirmDeleteBtn"
-          >
-            نعم، احذف
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 🔶 مودال تعديل المنشور -->
-    <div id="postEditOverlay" class="post-edit-overlay">
-      <div class="post-edit-modal">
-        <button type="button" id="postEditCloseBtn" class="post-edit-close">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-
-        <h3 class="post-edit-title">تعديل المنشور ✏️</h3>
-
-        <form id="postEditForm" class="post-edit-form">
-          <label class="post-edit-label" for="postEditText">نص المنشور</label>
-          <textarea
-            id="postEditText"
-            class="post-edit-textarea"
-            rows="4"
-            placeholder="عدّل النص هنا..."
-          ></textarea>
-
-          <!-- 👇 اختيار الخصوصية (عام / خاص) -->
-          <label class="post-edit-label" for="postEditPrivacy">
-            خصوصية المنشور
-          </label>
-          <select id="postEditPrivacy" class="post-edit-select">
-            <option value="public">عام</option>
-            <option value="private">خاص</option>
-          </select>
-          <!-- 👆 -->
-
-          <label class="post-edit-label" for="postEditMediaInput">
-            تغيير الصورة / الفيديو (اختياري)
-          </label>
-          <input
-            type="file"
-            id="postEditMediaInput"
-            class="post-edit-file"
-            accept="image/*,video/*"
-          />
-
-          <div class="post-edit-actions">
-            <span
-              id="postEditSaving"
-              class="post-edit-saving"
-              style="display: none"
-              >جاري الحفظ...</span
-            >
-            <button type="submit" class="post-edit-submit">
-              حفظ التعديلات
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- ⭐⭐ مودال الإبلاغ عن منشور ⭐⭐ -->
-    <div id="reportOverlay" class="report-overlay hidden">
-      <div class="report-box">
-        <!-- زر الإغلاق -->
-        <button
-          class="report-close"
-          id="reportCloseBtn"
-          type="button"
-          aria-label="إغلاق"
-        >
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-
-        <h3 class="report-title">الإبلاغ عن منشور</h3>
-        <p class="report-subtitle">
-          إذا كان هذا المنشور يخالف القواعد، اختر السبب وسنقوم بمراجعته.
-        </p>
-
-        <label for="reportReason" class="report-label">سبب الإبلاغ</label>
-        <select id="reportReason" class="report-select">
-          <option value="">اختر السبب…</option>
-          <option value="spam">سبام / محتوى مزعج</option>
-          <option value="hate">خطاب كراهية أو عنصرية</option>
-          <option value="sexual">محتوى جنسي أو غير لائق</option>
-          <option value="violence">عنف أو مشاهد مزعجة</option>
-          <option value="misinfo">معلومات مضلِّلة</option>
-          <option value="self-harm">تحريض على إيذاء النفس</option>
-          <option value="other">سبب آخر…</option>
-        </select>
-
-        <div id="reportOtherWrapper" class="report-other hidden">
-          <label for="reportOther" class="report-label">
-            اشرح المشكلة (اختياري)
-          </label>
-          <textarea
-            id="reportOther"
-            class="report-textarea"
-            rows="3"
-            placeholder="اكتب وصفًا مختصرًا للمشكلة…"
-          ></textarea>
-        </div>
-
-        <div class="report-actions">
-          <button
-            id="reportCancelBtn"
-            class="btn-report-cancel"
-            type="button"
-          >
-            إلغاء
-          </button>
-          <button
-            id="reportSubmitBtn"
-            class="btn-report-primary"
-            type="button"
-          >
-            <i class="fa-regular fa-paper-plane"></i>
-            <span>إرسال البلاغ</span>
-          </button>
-        </div>
-      </div>
-    </div>
-    <!-- ⭐⭐ نهاية مودال الإبلاغ ⭐⭐ -->
-
-    <!-- ⭐⭐ عارض القصص (Story Viewer) ⭐⭐ -->
-    <div id="storyViewerOverlay" class="story-viewer-overlay">
-      <div class="story-viewer-shell">
-        <div class="story-viewer glass soft-shadow">
-          <!-- شريط التقدم -->
-          <div class="story-progress">
-            <div class="story-progress-bar" id="storyProgressBar"></div>
-          </div>
-
-          <!-- ترويسة العارض -->
-          <div class="story-viewer-header">
-            <div class="story-viewer-user">
-              <div class="story-viewer-avatar" id="storyViewerAvatar">S</div>
-              <div class="story-viewer-meta">
-                <span id="storyViewerName">اسم المستخدم</span>
-                <div class="story-viewer-sub">
-                  <span id="storyViewerTime" class="story-viewer-time">
-                    منذ 1 ساعة
-                  </span>
-                  <span id="storyViewerViews" class="story-viewer-views">
-                    👁‍🗨 0
-                  </span>
-                </div>
+    <div class="welcome-wrap">
+      <div class="welcome-card glass">
+        <div>
+          <div class="welcome-brand">
+            <div class="welcome-logo logo-icon">S</div>
+            <div>
+              <div class="welcome-title" data-i18n="title">مرحبًا بك في Saepel</div>
+              <div class="welcome-sub" data-i18n="subtitle">
+                مجتمع عربي عصري لمشاركة الأفكار واللحظات.
               </div>
             </div>
-
-            <div class="story-viewer-actions">
-              <!-- ⭐ زر الإبلاغ عن القصة -->
-              <button
-                type="button"
-                class="story-icon-btn"
-                id="storyReportBtn"
-                title="الإبلاغ عن هذه القصة"
-              >
-                <i class="fa-regular fa-flag"></i>
-              </button>
-
-              <button
-                type="button"
-                class="story-icon-btn"
-                id="storyMuteBtn"
-                title="كتم الصوت"
-              >
-                <i class="fa-solid fa-volume-xmark"></i>
-              </button>
-              <button
-                type="button"
-                class="story-icon-btn"
-                id="storyCloseBtn"
-                title="إغلاق"
-              >
-                <i class="fa-solid fa-xmark"></i>
-              </button>
-            </div>
           </div>
 
-          <!-- محتوى القصة -->
-          <div class="story-viewer-body">
-            <div class="story-viewer-media" id="storyViewerMedia">
-              <!-- يتم حقن الصورة/الفيديو من JS -->
-            </div>
-          </div>
+          <p class="welcome-text" data-i18n="body">
+            Saepel هي منصة اجتماعية بسيطة وسريعة تساعدك على مشاركة يومك، متابعة أصدقائك،
+            والتفاعل مع القصص والمنشورات بطريقة ممتعة وآمنة.
+          </p>
 
-          <!-- تفاعل: ردود الفعل و الرد -->
-          <div class="story-viewer-interactions">
-            <div class="story-reactions">
-              <button class="reaction-btn" data-reaction="❤️">❤️</button>
-              <button class="reaction-btn" data-reaction="😂">😂</button>
-              <button class="reaction-btn" data-reaction="😮">😮</button>
-              <button class="reaction-btn" data-reaction="😢">😢</button>
-              <button class="reaction-btn" data-reaction="🔥">🔥</button>
-            </div>
-
-            <div class="story-reply-row">
-              <input
-                type="text"
-                id="storyReplyInput"
-                class="story-reply-input"
-                placeholder="اكتب رسالة سريعة لصاحب القصة…"
-              />
-              <button
-                type="button"
-                id="storyReplySendBtn"
-                class="story-reply-send"
-                title="إرسال"
-              >
-                <i class="fa-regular fa-paper-plane"></i>
-              </button>
-            </div>
-          </div>
-
-          <!-- أزرار التنقل -->
-          <div class="story-viewer-footer">
-            <button
-              type="button"
-              class="story-nav-btn"
-              id="storyPrevBtn"
-              title="السابق"
-            >
-              <i class="fa-solid fa-chevron-right"></i>
-            </button>
-            <button
-              type="button"
-              class="story-nav-btn"
-              id="storyNextBtn"
-              title="التالي"
-            >
-              <i class="fa-solid fa-chevron-left"></i>
+          <div class="welcome-actions">
+            <button class="welcome-btn btn-primary start-btn" id="startBtn" data-i18n="start">
+              ابدأ الآن
             </button>
           </div>
 
-          <!-- ✅ شريط أكشن للستوري (مشاهدات / حذف / إبلاغ / كتم مستخدم) -->
-          <div class="story-footer-actions">
-            <button class="sf-views-btn" id="sfViewsBtn" type="button">
-              <i class="fa-regular fa-eye"></i>
-              <span id="sfViewsCount">0</span>
-              <span>مشاهدة</span>
-            </button>
-
-            <div class="sf-actions-right">
-              <button
-                class="sf-icon-btn"
-                id="sfMuteBtn"
-                type="button"
-                title="كتم هذا المستخدم"
-              >
-                <i class="fa-solid fa-bell-slash"></i>
+          <div class="auth-section" id="authSection">
+            <div class="welcome-actions">
+              <button class="welcome-btn btn-primary" id="goRegister" data-i18n="register">
+                إنشاء حساب
               </button>
-              <button
-                class="sf-icon-btn sf-danger"
-                id="sfReportBtn"
-                type="button"
-                title="الإبلاغ عن هذه القصة"
-              >
-                <i class="fa-regular fa-flag"></i>
-              </button>
-              <button
-                class="sf-icon-btn sf-danger"
-                id="sfDeleteBtn"
-                type="button"
-                title="حذف القصة"
-              >
-                <i class="fa-regular fa-trash-can"></i>
+              <button class="welcome-btn secondary" id="goLogin" data-i18n="login">
+                تسجيل الدخول
               </button>
             </div>
           </div>
+        </div>
 
-          <!-- ✅ لوحة المشاهدات -->
-          <div class="story-views-panel" id="sfViewsPanel">
-            <div class="sf-views-header">
-              <span>المشاهدات</span>
-              <button id="sfViewsClose" type="button">
-                <i class="fa-solid fa-xmark"></i>
-              </button>
+        <div class="welcome-list">
+          <div class="welcome-item glass">
+            <i class="fa-regular fa-message"></i>
+            <div>
+              <div data-i18n="f1_title">دردشة فورية</div>
+              <div class="welcome-sub" data-i18n="f1_desc">
+                رسائل خاصة ومحادثات مجموعات بسهولة.
+              </div>
             </div>
-            <div class="sf-views-list" id="sfViewsList">
-              <!-- يتم تعبئتها من JS -->
+          </div>
+          <div class="welcome-item glass">
+            <i class="fa-regular fa-images"></i>
+            <div>
+              <div data-i18n="f2_title">قصص ومنشورات</div>
+              <div class="welcome-sub" data-i18n="f2_desc">
+                شارك صورك وفيديوهاتك فورًا.
+              </div>
+            </div>
+          </div>
+          <div class="welcome-item glass">
+            <i class="fa-regular fa-shield"></i>
+            <div>
+              <div data-i18n="f3_title">خصوصية وأمان</div>
+              <div class="welcome-sub" data-i18n="f3_desc">
+                تحكم بخصوصية حسابك ومحتواك.
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-    <!-- ⭐⭐ نهاية عارض القصص ⭐⭐ -->
 
-    <!-- ✅ Toast للإشعارات الأنيقة -->
-    <div id="saeToast" class="sae-toast"></div>
-
-    <!-- ملف الجافاسكربت الرئيسي -->
-    <script src="assets/js/app.js"></script>
-    <!-- ⭐ ملف جافاسكربت لقائمة الثلاث نقاط -->
-    <script src="assets/js/postMenu.js"></script>
-    <!-- ⭐ ملف جافاسكربت للقصص -->
-    <script src="assets/js/stories.js"></script>
-
-    <!-- جافاسكربت بسيط للقائمة + تطبيق المظهر المحفوظ -->
     <script>
-      const APPEARANCE_KEY = "saepelAppearance";
+      const i18n = {
+        ar: {
+          title: "مرحبًا بك في Saepel",
+          subtitle: "مجتمع عربي عصري لمشاركة الأفكار واللحظات.",
+          body: "Saepel هي منصة اجتماعية بسيطة وسريعة تساعدك على مشاركة يومك، متابعة أصدقائك، والتفاعل مع القصص والمنشورات بطريقة ممتعة وآمنة.",
+          start: "ابدأ الآن",
+          register: "إنشاء حساب",
+          login: "تسجيل الدخول",
+          f1_title: "دردشة فورية",
+          f1_desc: "رسائل خاصة ومحادثات مجموعات بسهولة.",
+          f2_title: "قصص ومنشورات",
+          f2_desc: "شارك صورك وفيديوهاتك فورًا.",
+          f3_title: "خصوصية وأمان",
+          f3_desc: "تحكم بخصوصية حسابك ومحتواك.",
+        },
+        en: {
+          title: "Welcome to Saepel",
+          subtitle: "A modern community to share ideas and moments.",
+          body: "Saepel is a simple and fast social platform to share your day, follow friends, and engage with stories and posts safely.",
+          start: "Get Started",
+          register: "Create Account",
+          login: "Sign In",
+          f1_title: "Instant Chat",
+          f1_desc: "Private messages and group chats made easy.",
+          f2_title: "Stories & Posts",
+          f2_desc: "Share photos and videos instantly.",
+          f3_title: "Privacy & Safety",
+          f3_desc: "Control your privacy and your content.",
+        },
+      };
 
-      (function applyAppearanceFromStorage() {
-        try {
-          const raw = localStorage.getItem(APPEARANCE_KEY);
-          if (!raw) return;
-          const s = JSON.parse(raw);
-          document.documentElement.classList.toggle("theme-dark", !!s.dark);
-          document.body.classList.toggle("body-compact", !!s.compact);
-          document.body.classList.toggle("soft-anim", !!s.anim);
-        } catch (e) {
-          console.warn("cannot apply appearance", e);
-        }
+      (function applyLocale() {
+        const lang = (navigator.language || "ar").toLowerCase();
+        const isArabic = lang.startsWith("ar");
+        const dict = isArabic ? i18n.ar : i18n.en;
+
+        document.documentElement.lang = isArabic ? "ar" : "en";
+        document.documentElement.dir = isArabic ? "rtl" : "ltr";
+
+        document.querySelectorAll("[data-i18n]").forEach((el) => {
+          const key = el.getAttribute("data-i18n");
+          if (dict[key]) el.textContent = dict[key];
+        });
       })();
 
-      const mainMenuBtn = document.getElementById("mainMenuBtn");
-      const sideMenu = document.getElementById("sideMenu");
-      const closeMenuBtn = document.getElementById("closeMenuBtn");
-      const menuItems = document.querySelectorAll(".menu-item");
+      document.getElementById("goRegister").addEventListener("click", () => {
+        window.location.href = "register.html";
+      });
 
-      // ✅ زر الرسائل في الهيدر
-      const topMessagesBtn = document.getElementById("topMessagesBtn");
-      if (topMessagesBtn) {
-        topMessagesBtn.addEventListener("click", () => {
-          window.location.href = "inbox.html";
-        });
-      }
+      document.getElementById("goLogin").addEventListener("click", () => {
+        window.location.href = "login.html";
+      });
 
-      if (mainMenuBtn && sideMenu && closeMenuBtn) {
-        mainMenuBtn.addEventListener("click", () => {
-          sideMenu.classList.add("active");
-        });
-
-        closeMenuBtn.addEventListener("click", () => {
-          sideMenu.classList.remove("active");
-        });
-
-        sideMenu.addEventListener("click", (e) => {
-          if (e.target === sideMenu) {
-            sideMenu.classList.remove("active");
-          }
-        });
-      }
-
-      menuItems.forEach((item) => {
-        item.addEventListener("click", async () => {
-          const action = item.dataset.action;
-
-          switch (action) {
-            case "profile":
-              window.location.href = "profile.html";
-              break;
-
-            case "saved":
-              // عرض المحفوظات داخل نفس الصفحة بدل فتح صفحة جديدة
-              if (typeof fetchSavedPostIds === "function") {
-                try {
-                  await fetchSavedPostIds();
-                  if (typeof loadSavedPosts === "function") {
-                    await loadSavedPosts();
-                  }
-                  if (typeof showToast === "function") {
-                    showToast("تم عرض المحفوظات 📌", "success");
-                  }
-                } catch (e) {
-                  console.error(e);
-                  if (typeof showToast === "function") {
-                    showToast("تعذر تحميل المحفوظات", "error");
-                  }
-                }
-              }
-              break;
-
-            case "personalization":
-              window.location.href = "appearance.html";
-              break;
-
-            case "messenger":
-              // ✅ افتح صفحة الرسائل
-              window.location.href = "inbox.html";
-              break;
-
-            case "logout":
-              localStorage.removeItem("token");
-              localStorage.removeItem("user");
-              if (typeof showToast === "function") {
-                showToast("تم تسجيل الخروج بنجاح ✅", "success");
-                setTimeout(() => {
-                  window.location.href = "login.html";
-                }, 800);
-              } else {
-                window.location.href = "login.html";
-              }
-              break;
-
-            default:
-              if (typeof showToast === "function") {
-                showToast("هذه الميزة قيد التطوير في Saepel 🔧");
-              }
-              break;
-          }
-
-          sideMenu.classList.remove("active");
-        });
+      document.getElementById("startBtn").addEventListener("click", () => {
+        const section = document.getElementById("authSection");
+        section.scrollIntoView({ behavior: "smooth", block: "center" });
       });
     </script>
   </body>
