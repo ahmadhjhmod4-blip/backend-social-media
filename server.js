@@ -17,10 +17,37 @@ dotenv.config({ path: path.join(__dirname, ".env") });
 // fallback: ظ„ظˆ ط­ط§ط¨ طھط´ط؛ظ‘ظ„ظ‡ ظ…ظ† ط£ظٹ ظ…ظƒط§ظ† ظˆظپظٹظ‡ .env ط¨ط§ظ„ظ€ CWD
 dotenv.config();
 
+// ===== Firebase Admin (Push Notifications) =====
+const {
+  FIREBASE_PROJECT_ID,
+  FIREBASE_CLIENT_EMAIL,
+  FIREBASE_PRIVATE_KEY,
+} = process.env;
+
+let firebaseReady = false;
+if (FIREBASE_PROJECT_ID && FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: FIREBASE_PROJECT_ID,
+        clientEmail: FIREBASE_CLIENT_EMAIL,
+        privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+      }),
+    });
+    firebaseReady = true;
+    console.log("✅ Firebase Admin initialized");
+  } catch (e) {
+    console.error("⚠️ Firebase Admin init failed:", e?.message || e);
+  }
+} else {
+  console.warn("⚠️ Firebase Admin is not configured. Set FIREBASE_* env vars.");
+}
+
 import { createServer } from "http";
 import { Server } from "socket.io";
 import fs from "fs/promises";
 import crypto from "crypto";
+import admin from "firebase-admin";
 
 import User from "./models/User.js";
 import Post from "./models/Post.js";
@@ -30,6 +57,7 @@ import upload, { uploadsDir } from "./upload.js";
 import Conversation from "./models/Conversation.js"; // â­گ ظ…ظˆط¯ظٹظ„ ط§ظ„ظ…ط­ط§ط¯ط«ط§طھ
 import Message from "./models/Message.js"; // â­گ ظ…ظˆط¯ظٹظ„ ط§ظ„ط±ط³ط§ط¦ظ„
 import CallLog from "./models/CallLog.js"; // â­گ ط³ط¬ظ„ ط§ظ„ط§طھطµط§ظ„ط§طھ
+import NotificationToken from "./models/NotificationToken.js";
 mongoose.set("strictPopulate", false);
 
 // Counter model for publicId sequence
@@ -873,6 +901,20 @@ app.use(
 app.options(/.*/, cors()); // Express v5: ط§ط³طھط®ط¯ظ… Regex ط¨ط¯ظ„ "*"
 app.use(express.json({ limit: "15mb" })); // âœ… ط­طھظ‰ ظ„ط§ ظٹظ†ظپط¬ط± ظ„ظˆ ظˆطµظ„ DataURL طµط؛ظٹط± (ظ„ظƒظ† ط§ظ„ط£ظپط¶ظ„ ط¯ط§ط¦ظ…ط§ظ‹ ط±ظپط¹ ظƒظ…ظ„ظپ)
 
+// ✅ إعادة توجيه مسارات الدخول/التسجيل إذا كان المسار بدون /api
+// يفيد إذا البروكسي/الهوست يحذف /api أو إذا العميل طلب /login مباشرة
+app.use((req, res, next) => {
+  if (
+    req.path === "/login" ||
+    req.path === "/register" ||
+    req.path === "/auth/login" ||
+    req.path === "/auth/register"
+  ) {
+    req.url = `/api${req.url}`;
+  }
+  next();
+});
+
 // ظ…ظ„ظپط§طھ ط§ظ„ط±ظپط¹ (ط§ظ„طµظˆط± / ط§ظ„ظپظٹط¯ظٹظˆ / ط§ظ„طµظˆطھ) ظƒظ€ static
 // âœ… ط§ظ„ظ…ط³ط§ط± ط§ظ„ط­ظ‚ظٹظ‚ظٹ ط§ظ„ط°ظٹ ظٹط­ظپط¸ ظپظٹظ‡ multer (upload.js) â€” ظ…ظ‡ظ… ط¬ط¯ط§ظ‹ ط¹ظ„ظ‰ Render
 app.use("/uploads", express.static(uploadsDir));
@@ -990,6 +1032,59 @@ const authMiddleware = (req, res, next) => {
   }
 
 };
+
+/* ===================================================================== */
+/* ✅ Notifications (FCM) */
+/* ===================================================================== */
+app.post("/api/notifications/register-token", authMiddleware, async (req, res) => {
+  try {
+    const token = String(req.body?.token || "").trim();
+    if (!token) return res.status(400).json({ msg: "Token مطلوب" });
+
+    const userId = req.userId;
+    const doc = await NotificationToken.findOneAndUpdate(
+      { userId },
+      { $addToSet: { tokens: token } },
+      { upsert: true, new: true }
+    );
+
+    return res.json({ msg: "تم حفظ التوكن", count: doc?.tokens?.length || 0 });
+  } catch (err) {
+    console.error("register-token error:", err);
+    return res.status(500).json({ msg: "خطأ في حفظ التوكن" });
+  }
+});
+
+// اختبار سريع للإشعارات
+app.post("/api/notifications/test", authMiddleware, async (req, res) => {
+  try {
+    if (!firebaseReady) {
+      return res.status(400).json({ msg: "Firebase Admin غير مفعّل" });
+    }
+    const userId = req.userId;
+    const doc = await NotificationToken.findOne({ userId });
+    const tokens = doc?.tokens || [];
+    if (!tokens.length) {
+      return res.status(400).json({ msg: "لا يوجد توكن محفوظ للمستخدم" });
+    }
+    const title = String(req.body?.title || "Saepel").trim();
+    const body = String(req.body?.body || "Test Notification").trim();
+
+    const message = {
+      notification: { title, body },
+      tokens,
+    };
+    const result = await admin.messaging().sendEachForMulticast(message);
+    return res.json({
+      msg: "تم الإرسال",
+      successCount: result.successCount,
+      failureCount: result.failureCount,
+    });
+  } catch (err) {
+    console.error("notifications test error:", err);
+    return res.status(500).json({ msg: "فشل إرسال الإشعار" });
+  }
+});
 
 /* ===================================================================== */
 /* âœ… WebRTC RTC Config (STUN/TURN) â€” ظ„ظٹط´طھط؛ظ„ ط¹ظ„ظ‰ ظƒظ„ ط§ظ„ط´ط¨ظƒط§طھ */

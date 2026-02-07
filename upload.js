@@ -11,9 +11,13 @@ import path from "path";
 import fs from "fs";
 
 // ✅ مجلد الرفع الأساسي (Base)
+// Render: إذا ما انحدد UPLOADS_DIR استخدم قرص دائم (Persistent Disk) لو متوفر.
+const renderDiskBase = process.env.RENDER_DISK_PATH || "/var/data";
 export const uploadsDir = process.env.UPLOADS_DIR
   ? path.resolve(process.env.UPLOADS_DIR)
-  : path.join(process.cwd(), "uploads");
+  : process.env.RENDER
+    ? path.join(renderDiskBase, "uploads")
+    : path.join(process.cwd(), "uploads");
 
 function ensureDirSync(dirPath) {
   try {
