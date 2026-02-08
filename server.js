@@ -745,19 +745,21 @@ const populatedMessage = await message.populate("sender", "username fullName ava
   // ظ…ظ„ط§ط­ط¸ط©: ظ‡ط°ط§ ظپظ‚ط· طھط±ط­ظٹظ„ (relay) ط¨ظٹظ† ط§ظ„ظ…ط³طھط®ط¯ظ…ظٹظ† ط¹ط¨ط± ط؛ط±ظپ user-<id>.
   // ط§ظ„ظپط±ظˆظ†طھ ظٹط±ط³ظ„: call:invite / call:ringing / call:accept / call:reject / call:cancel / call:end / call:busy
 
-  socket.on("call:invite", (payload = {}) => {
+  socket.on("call:invite", async (payload = {}) => {
     try {
       const from = String(socket.userId || "");
       const to = String(payload.to || "");
       const callId = String(payload.callId || "");
       const type = payload.type === "video" ? "video" : "audio";
       if (!from || !to || !callId || to === from) return;
+      const fromUser = await User.findById(from).select("fullName username").lean();
+      const fromName = String(fromUser?.fullName || fromUser?.username || "User");
 
       // âœ… Call log: create/update ringing
       upsertCallLogRinging({ callId, from, to, type });
 
       // ط£ط±ط³ظ„ ظ„ظ„ط·ط±ظپ ط§ظ„ط¢ط®ط±
-      io.to(`user-${to}`).emit("call:incoming", { callId, from, type });
+      io.to(`user-${to}`).emit("call:incoming", { callId, from, type, fromName });
       sendIncomingCallPush({
         toUserId: to,
         fromUserId: from,
@@ -887,14 +889,16 @@ const populatedMessage = await message.populate("sender", "username fullName ava
   });
 
   // âœ… Alias ط¥ط¶ط§ظپظٹط© (ط§ط®طھظٹط§ط±ظٹ): call:start â†’ call:invite
-  socket.on("call:start", (payload = {}) => {
+  socket.on("call:start", async (payload = {}) => {
     try {
       const from = String(socket.userId || "");
       const to = String(payload.to || "");
       const callId = String(payload.callId || "");
       const type = payload.type === "video" ? "video" : "audio";
       if (!from || !to || !callId || to === from) return;
-      io.to(`user-${to}`).emit("call:incoming", { callId, from, type });
+      const fromUser = await User.findById(from).select("fullName username").lean();
+      const fromName = String(fromUser?.fullName || fromUser?.username || "User");
+      io.to(`user-${to}`).emit("call:incoming", { callId, from, type, fromName });
       sendIncomingCallPush({
         toUserId: to,
         fromUserId: from,
