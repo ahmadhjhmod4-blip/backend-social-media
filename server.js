@@ -1090,11 +1090,34 @@ function uploadAuthGuard(req, res, next) {
   }
 }
 
+function uploadErrorMessage(err) {
+  if (!err || typeof err !== "object") return "فشل رفع الملف";
+  const code = String(err.code || "");
+  if (code === "LIMIT_FILE_SIZE") return "حجم الملف كبير جدًا";
+  if (code === "LIMIT_FILE_COUNT") return "عدد الملفات أكبر من المسموح";
+  if (code === "LIMIT_UNEXPECTED_FILE") return "اسم حقل الملف غير مدعوم";
+  return "فشل رفع الملف";
+}
+
+function runUpload(middleware) {
+  return (req, res, next) => {
+    middleware(req, res, (err) => {
+      if (!err) return next();
+      if (err?.name === "MulterError") {
+        console.error("Upload middleware multer error:", err);
+        return res.status(400).json({ msg: uploadErrorMessage(err), code: err.code || "MULTER_ERROR" });
+      }
+      console.error("Upload middleware error:", err);
+      return res.status(500).json({ msg: "فشل رفع الملف", code: "UPLOAD_ERROR" });
+    });
+  };
+}
+
 /* ===================================================================== */
 /* âœ…âœ…âœ…  ط±ط§ظˆطھ ط±ظپط¹ ط¹ط§ظ… (ظƒط§ظ† ظ†ط§ظ‚طµ ظˆظ‡ظˆ ط³ط¨ط¨ 404 /api/upload)  âœ…âœ…âœ… */
 /* ===================================================================== */
 // ظٹط±ظپط¹ ط£ظٹ ظ…ظ„ظپ via FormData (ط£ظˆظ„ ظ…ظ„ظپ ظ…ظˆط¬ظˆط¯) ظˆظٹط±ط¬ط¹ URL ط¬ط§ظ‡ط² ظ„ظ„ط§ط³طھط®ط¯ط§ظ…
-app.post("/api/upload", uploadAuthGuard, upload.any(), async (req, res) => {
+app.post("/api/upload", uploadAuthGuard, runUpload(upload.any()), async (req, res) => {
   try {
     const f = Array.isArray(req.files) && req.files.length ? req.files[0] : null;
     if (!f) return res.status(400).json({ msg: "ظ„ط§ ظٹظˆط¬ط¯ ظ…ظ„ظپ ظ…ط±ظپظˆط¹" });
@@ -1283,7 +1306,7 @@ const authMiddlewareOptional = (req, res, next) => {
 app.post(
   "/api/chat/upload-audio",
   authMiddleware,
-  upload.any(),
+  runUpload(upload.any()),
   async (req, res) => {
     try {
       // 1) ظ…ظ„ظپ ظ…ط±ظپظˆط¹ (FormData)
@@ -1360,7 +1383,7 @@ app.post(
 app.post(
   "/api/chat/upload/attachment",
   authMiddleware,
-  upload.any(), // ظ†ظ‚ط¨ظ„ ط£ظٹ key ظ„ظ„ظ…ظ„ظپ (file / image / video ... ط¥ظ„ط®)
+  runUpload(upload.any()), // ظ†ظ‚ط¨ظ„ ط£ظٹ key ظ„ظ„ظ…ظ„ظپ (file / image / video ... ط¥ظ„ط®)
   async (req, res) => {
     try {
       let f = null;
@@ -2815,10 +2838,12 @@ app.post("/api/chat/conversations/:id/clear", authMiddleware, async (req, res) =
 app.post(
   "/api/chat/conversations/:id/messages",
   authMiddleware,
-  upload.fields([
-    { name: "attachments", maxCount: 5 },
-    { name: "voice", maxCount: 1 },
-  ]),
+  runUpload(
+    upload.fields([
+      { name: "attachments", maxCount: 5 },
+      { name: "voice", maxCount: 1 },
+    ])
+  ),
   async (req, res) => {
     try {
       const userId = req.userId;

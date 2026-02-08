@@ -13,23 +13,54 @@ import fs from "fs";
 // ✅ مجلد الرفع الأساسي (Base)
 // Render: إذا ما انحدد UPLOADS_DIR استخدم قرص دائم (Persistent Disk) لو متوفر.
 const renderDiskBase = process.env.RENDER_DISK_PATH || "/var/data";
-export const uploadsDir = process.env.UPLOADS_DIR
+const localUploadsDir = path.join(process.cwd(), "uploads");
+const requestedUploadsDir = process.env.UPLOADS_DIR
   ? path.resolve(process.env.UPLOADS_DIR)
   : process.env.RENDER
     ? path.join(renderDiskBase, "uploads")
-    : path.join(process.cwd(), "uploads");
+    : localUploadsDir;
 
 function ensureDirSync(dirPath) {
   try {
     if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
+    return true;
   } catch (e) {
     // لا تكسر التشغيل لو فشل إنشاء المجلد (نطبع فقط)
     console.error("❌ Failed to create uploads directory:", dirPath, e?.message || e);
+    return false;
   }
 }
 
-// ✅ أنشئ المجلد الأساسي إذا مش موجود (يمنع ENOENT)
-ensureDirSync(uploadsDir);
+function canWriteDirSync(dirPath) {
+  if (!ensureDirSync(dirPath)) return false;
+  const probe = path.join(
+    dirPath,
+    `.write-probe-${Date.now()}-${Math.round(Math.random() * 1e6)}`
+  );
+  try {
+    fs.writeFileSync(probe, "ok");
+    fs.unlinkSync(probe);
+    return true;
+  } catch (e) {
+    console.error("❌ Uploads directory is not writable:", dirPath, e?.message || e);
+    return false;
+  }
+}
+
+const resolvedUploadsDir = canWriteDirSync(requestedUploadsDir)
+  ? requestedUploadsDir
+  : localUploadsDir;
+if (resolvedUploadsDir !== requestedUploadsDir) {
+  console.warn(
+    "⚠️ Falling back to local uploads directory:",
+    resolvedUploadsDir,
+    "(requested:",
+    requestedUploadsDir,
+    ")"
+  );
+  ensureDirSync(resolvedUploadsDir);
+}
+export const uploadsDir = resolvedUploadsDir;
 
 // ✅ خريطة امتدادات حسب mime (لتسجيلات الصوت خصوصاً)
 const mimeToExt = {
@@ -69,7 +100,9 @@ const storage = multer.diskStorage({
     const userId = req?.userId ? String(req.userId) : "";
     const dest = getUserUploadsDir(userId);
 
-    ensureDirSync(dest);
+    if (!ensureDirSync(dest)) {
+      return cb(new Error("UPLOAD_DIR_NOT_WRITABLE"));
+    }
     cb(null, dest);
   },
   filename: (req, file, cb) => {
