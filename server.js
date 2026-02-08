@@ -186,22 +186,27 @@ const io = new Server(server, {
     credentials: !ALLOW_ALL, // ظ„ظˆ * ظ…ط§ ظپظٹ credentials
   },
 });
-// طھط®ط²ظٹظ† ط§ظ„ظ…ط³طھط®ط¯ظ…ظٹظ† ط§ظ„ظ…طھطµظ„ظٹظ†
-const connectedUsers = new Map();
+// طھط®ط²ظٹظ† ط§ظ„ظ…ط³طھط®ط¯ظ…ظٹظ† ط§ظ„ظ…طھطµظ„ظٹظ† (ط¯ط¹ظ… ط£ظƒط«ط± ظ…ظ† socket ظ„ظ†ظپط³ ط§ظ„ظ…ط³طھط®ط¯ظ…)
+const connectedUsers = new Map(); // userId -> Set(socketId)
+const lastSeenByUser = new Map(); // userId -> ISO string
 
 function isUserOnline(userId) {
   const uid = String(userId || "").trim();
   if (!uid) return false;
-  return connectedUsers.has(uid);
+  const sockets = connectedUsers.get(uid);
+  return !!sockets && sockets.size > 0;
 }
 
 function emitPresence(userId, online) {
   const uid = String(userId || "").trim();
   if (!uid) return;
+  const lastSeen = online
+    ? null
+    : (lastSeenByUser.get(uid) || new Date().toISOString());
   io.emit("user:presence", {
     userId: uid,
     online: !!online,
-    lastSeen: online ? null : new Date().toISOString(),
+    lastSeen,
   });
 }
 
@@ -471,7 +476,10 @@ io.on("connection", (socket) => {
       }
 
       socket.join(`user-${uid}`);
-      connectedUsers.set(uid, socket.id);
+      if (!connectedUsers.has(uid)) connectedUsers.set(uid, new Set());
+      connectedUsers.get(uid).add(socket.id);
+      socket.joinedUserId = uid;
+      lastSeenByUser.delete(uid);
       emitPresence(uid, true);
       console.log(`ًں‘¤ ${uid} ط§ظ†ط¶ظ… ظ„ظ„ط¯ط±ط¯ط´ط© (socket: ${socket.id})`);
     } catch (e) {
@@ -486,7 +494,11 @@ io.on("connection", (socket) => {
         .map((x) => String(x || "").trim())
         .filter(Boolean)
         .slice(0, 100)
-        .map((id) => ({ userId: id, online: isUserOnline(id) }));
+        .map((id) => ({
+          userId: id,
+          online: isUserOnline(id),
+          lastSeen: lastSeenByUser.get(id) || null,
+        }));
       socket.emit("presence:state", { users });
     } catch (e) {
       console.error("presence:query error:", e);
@@ -974,12 +986,15 @@ socket.on("call:join", ({ callId } = {}) => {
 
   socket.on("disconnect", () => {
     console.log("â‌Œ ظ…ط³طھط®ط¯ظ… ط§ظ†ظ‚ط·ط¹:", socket.id);
-    for (const [userId, socketId] of connectedUsers.entries()) {
-      if (socketId === socket.id) {
-        connectedUsers.delete(userId);
-        emitPresence(userId, false);
-        break;
-      }
+    const uid = String(socket.joinedUserId || socket.userId || "").trim();
+    if (!uid) return;
+    const sockets = connectedUsers.get(uid);
+    if (!sockets) return;
+    sockets.delete(socket.id);
+    if (sockets.size === 0) {
+      connectedUsers.delete(uid);
+      lastSeenByUser.set(uid, new Date().toISOString());
+      emitPresence(uid, false);
     }
   });
 });
