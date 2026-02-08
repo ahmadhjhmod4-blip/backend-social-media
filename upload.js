@@ -91,16 +91,9 @@ const storage = multer.diskStorage({
   },
 });
 
-// ✅ فلترة بسيطة للأنواع المسموحة (صور/فيديو/صوت)
+// ✅ السماح بكل أنواع الملفات للمحادثات (مع الحفاظ على حد الحجم)
+// القيود النوعية الحساسة يتم التحقق منها داخل كل route عند الحاجة (مثل posts/media).
 function fileFilter(req, file, cb) {
-  const ok =
-    file.mimetype?.startsWith("image/") ||
-    file.mimetype?.startsWith("video/") ||
-    file.mimetype?.startsWith("audio/");
-
-  if (!ok) {
-    return cb(new Error("نوع الملف غير مدعوم"), false);
-  }
   cb(null, true);
 }
 

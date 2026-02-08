@@ -87,7 +87,7 @@ async function sendIncomingCallPush({ toUserId, fromUserId, type, callId }) {
         priority: "high",
         notification: {
           sound: "default",
-          channelId: "default",
+          channelId: "incoming_calls",
           priority: "max",
           visibility: "public",
         },
@@ -188,6 +188,22 @@ const io = new Server(server, {
 });
 // طھط®ط²ظٹظ† ط§ظ„ظ…ط³طھط®ط¯ظ…ظٹظ† ط§ظ„ظ…طھطµظ„ظٹظ†
 const connectedUsers = new Map();
+
+function isUserOnline(userId) {
+  const uid = String(userId || "").trim();
+  if (!uid) return false;
+  return connectedUsers.has(uid);
+}
+
+function emitPresence(userId, online) {
+  const uid = String(userId || "").trim();
+  if (!uid) return;
+  io.emit("user:presence", {
+    userId: uid,
+    online: !!online,
+    lastSeen: online ? null : new Date().toISOString(),
+  });
+}
 
 // ================== Helpers ظ„ظ„طµظˆطھ/ط§ظ„ظ…ط±ظپظ‚ط§طھ ط¹ط¨ط± DataURL ==================
 const UPLOADS_DIR = uploadsDir; // âœ… ظ†ظپط³ ظ…ط³ط§ط± multer (ظٹط¯ط¹ظ… Render Persistent Disk)
@@ -456,9 +472,24 @@ io.on("connection", (socket) => {
 
       socket.join(`user-${uid}`);
       connectedUsers.set(uid, socket.id);
+      emitPresence(uid, true);
       console.log(`ًں‘¤ ${uid} ط§ظ†ط¶ظ… ظ„ظ„ط¯ط±ط¯ط´ط© (socket: ${socket.id})`);
     } catch (e) {
       console.error("join-user error:", e);
+    }
+  });
+
+  socket.on("presence:query", (payload = {}) => {
+    try {
+      const ids = Array.isArray(payload?.userIds) ? payload.userIds : [];
+      const users = ids
+        .map((x) => String(x || "").trim())
+        .filter(Boolean)
+        .slice(0, 100)
+        .map((id) => ({ userId: id, online: isUserOnline(id) }));
+      socket.emit("presence:state", { users });
+    } catch (e) {
+      console.error("presence:query error:", e);
     }
   });
 
@@ -946,6 +977,7 @@ socket.on("call:join", ({ callId } = {}) => {
     for (const [userId, socketId] of connectedUsers.entries()) {
       if (socketId === socket.id) {
         connectedUsers.delete(userId);
+        emitPresence(userId, false);
         break;
       }
     }
@@ -2782,6 +2814,20 @@ app.post(
         if (Array.isArray(req.files.voice) && req.files.voice.length > 0) files.push(req.files.voice[0]);
       }
 
+      const bodyAttachmentsRaw =
+        typeof req.body?.attachments === "string"
+          ? (() => {
+              try {
+                const parsed = JSON.parse(req.body.attachments);
+                return Array.isArray(parsed) ? parsed : [];
+              } catch {
+                return [];
+              }
+            })()
+          : Array.isArray(req.body?.attachments)
+            ? req.body.attachments
+            : [];
+
       const detectKind = (mime) => {
         if (!mime) return "file";
         if (mime.startsWith("image/")) return "image";
@@ -2794,7 +2840,7 @@ app.post(
       const voiceDurationRaw = req.body?.voiceDuration ?? req.body?.duration ?? 0;
       const voiceDuration = Number.isFinite(Number(voiceDurationRaw)) ? Number(voiceDurationRaw) : 0;
 
-      const attachments = files.map((f) => {
+      const fileAttachments = files.map((f) => {
         const kind = detectKind(f.mimetype);
         const att = {
           url: buildUploadsUrlFromMulterFile(f),
@@ -2812,6 +2858,12 @@ app.post(
 
         return att;
       });
+
+      const bodyAttachments = await normalizeIncomingAttachments(
+        bodyAttachmentsRaw,
+        String(userId || "")
+      );
+      const attachments = [...fileAttachments, ...bodyAttachments];
 
 
       // âœ… Reply / Forward (ظ…ظ† FormData)
