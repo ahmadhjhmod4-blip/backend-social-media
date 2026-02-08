@@ -1216,12 +1216,19 @@ app.get("/api/calls/rtc-config", authMiddleware, (req, res) => {
     const turnUrlRaw = String(process.env.TURN_URL || "").trim();
     const turnUsername = String(process.env.TURN_USERNAME || "").trim();
     const turnCredential = String(process.env.TURN_CREDENTIAL || "").trim();
+    const hasPlaceholderTurn = /YOUR_HOST/i.test(turnUrlRaw);
 
-    if (turnUrlRaw && turnUsername && turnCredential) {
-      const urls = turnUrlRaw
-        .split(",")
+    const defaultMeteredTurnUrls = [
+      "turn:global.relay.metered.ca:80",
+      "turn:global.relay.metered.ca:80?transport=tcp",
+      "turn:global.relay.metered.ca:443",
+      "turns:global.relay.metered.ca:443?transport=tcp",
+    ];
+
+    if (turnUsername && turnCredential) {
+      const urls = (turnUrlRaw && !hasPlaceholderTurn ? turnUrlRaw.split(",") : defaultMeteredTurnUrls)
         .map((s) => s.trim())
-        .filter(Boolean);
+        .filter((s) => Boolean(s) && /^turns?:/i.test(s));
 
       if (urls.length) {
         iceServers.push({
