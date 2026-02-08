@@ -60,6 +60,61 @@ import CallLog from "./models/CallLog.js"; // â­گ ط³ط¬ظ„ ط§ظ„ط§
 import NotificationToken from "./models/NotificationToken.js";
 mongoose.set("strictPopulate", false);
 
+async function sendIncomingCallPush({ toUserId, fromUserId, type, callId }) {
+  try {
+    if (!firebaseReady) return;
+    const to = String(toUserId || "").trim();
+    const from = String(fromUserId || "").trim();
+    const cid = String(callId || "").trim();
+    if (!to || !from || !cid) return;
+
+    const doc = await NotificationToken.findOne({ userId: to }).lean();
+    const tokens = Array.isArray(doc?.tokens) ? doc.tokens.filter(Boolean) : [];
+    if (!tokens.length) return;
+
+    const isVideo = String(type || "").toLowerCase() === "video";
+    const fromUser = await User.findById(from).select("fullName username").lean();
+    const fromName = String(
+      fromUser?.fullName || fromUser?.username || "User",
+    );
+    const message = {
+      tokens,
+      notification: {
+        title: "Incoming Call",
+        body: `${isVideo ? "Video" : "Voice"} call from ${fromName}`,
+      },
+      android: {
+        priority: "high",
+        notification: {
+          sound: "default",
+          channelId: "default",
+          priority: "max",
+          visibility: "public",
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: "default",
+            contentAvailable: true,
+          },
+        },
+      },
+      data: {
+        type: "call_incoming",
+        callId: cid,
+        from: from,
+        mode: isVideo ? "video" : "audio",
+        fromName,
+      },
+    };
+
+    await admin.messaging().sendEachForMulticast(message);
+  } catch (e) {
+    console.error("sendIncomingCallPush error:", e?.message || e);
+  }
+}
+
 // Counter model for publicId sequence
 const counterSchema = new mongoose.Schema(
   {
@@ -660,6 +715,12 @@ const populatedMessage = await message.populate("sender", "username fullName ava
 
       // ط£ط±ط³ظ„ ظ„ظ„ط·ط±ظپ ط§ظ„ط¢ط®ط±
       io.to(`user-${to}`).emit("call:incoming", { callId, from, type });
+      sendIncomingCallPush({
+        toUserId: to,
+        fromUserId: from,
+        type,
+        callId,
+      });
     } catch (e) {
       console.error("call:invite error:", e);
     }
@@ -791,6 +852,12 @@ const populatedMessage = await message.populate("sender", "username fullName ava
       const type = payload.type === "video" ? "video" : "audio";
       if (!from || !to || !callId || to === from) return;
       io.to(`user-${to}`).emit("call:incoming", { callId, from, type });
+      sendIncomingCallPush({
+        toUserId: to,
+        fromUserId: from,
+        type,
+        callId,
+      });
     } catch (e) {
       console.error("call:start error:", e);
     }
