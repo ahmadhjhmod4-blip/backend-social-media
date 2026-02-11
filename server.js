@@ -134,10 +134,10 @@ const JWT_SECRET = String(process.env.JWT_SECRET || "").trim();
 const JWT_SECRET_EFFECTIVE = JWT_SECRET || "DEV_SECRET_CHANGE_ME";
 if (!JWT_SECRET) {
   if (process.env.NODE_ENV === "production") {
-    console.error("â‌Œ JWT_SECRET ط؛ظٹط± ظ…ط¶ط¨ظˆط·. ظ…ط·ظ„ظˆط¨ ظپظٹ ط§ظ„ط¥ظ†طھط§ط¬.");
+    console.error("❌ JWT_SECRET غير مضبوط. مطلوب في الإنتاج.");
     process.exit(1);
   } else {
-    console.warn("âڑ ï¸ڈ JWT_SECRET ط؛ظٹط± ظ…ط¶ط¨ظˆط·. ط³ظٹطھظ… ط§ط³طھط®ط¯ط§ظ… ظ‚ظٹظ…ط© طھط·ظˆظٹط± ظ…ط¤ظ‚طھط©.");
+    console.warn("⚠️ JWT_SECRET غير مضبوط. سيتم استخدام قيمة تطوير مؤقتة.");
   }
 }
 
@@ -237,11 +237,16 @@ function safeExtFromMime(mime = "") {
   return "bin";
 }
 
-function detectKindFromMime(mime = "") {
+function detectKindFromMime(mime = "", fileName = "") {
   const m = String(mime).toLowerCase();
   if (m.startsWith("image/")) return "image";
   if (m.startsWith("video/")) return "video";
   if (m.startsWith("audio/")) return "audio";
+
+  const n = String(fileName).toLowerCase().split("?")[0].split("#")[0];
+  if (/\.(jpg|jpeg|png|gif|webp|bmp|heic|heif|avif)$/i.test(n)) return "image";
+  if (/\.(mp4|mov|m4v|webm|mkv|avi)$/i.test(n)) return "video";
+  if (/\.(mp3|m4a|aac|wav|ogg|oga|flac|opus|webm)$/i.test(n)) return "audio";
   return "file";
 }
 
@@ -317,7 +322,7 @@ async function normalizeIncomingAttachments(raw = [], userId = "") {
 
     if (!savedUrl) continue;
 
-    const kind = item.type || item.kind || detectKindFromMime(mimeType);
+    const kind = item.type || item.kind || detectKindFromMime(mimeType, originalName);
 
     const durationRaw = item.duration ?? item.audioDuration ?? item.dur ?? 0;
     const duration = Number.isFinite(Number(durationRaw)) ? Number(durationRaw) : 0;
@@ -464,14 +469,14 @@ async function markCallLogEnded({ callId, status = "ended" }) {
 
 
 io.on("connection", (socket) => {
-  console.log("ًں”Œ ظ…ط³طھط®ط¯ظ… ظ…طھطµظ„:", socket.id, "userId:", socket.userId);
+  console.log("🔌 مستخدم متصل:", socket.id, "userId:", socket.userId);
 
   // âœ… join-user ظ„ط§ط²ظ… ظٹط·ط§ط¨ظ‚ طھظˆظƒظ†
   socket.on("join-user", (userId) => {
     try {
       const uid = String(userId || "");
       if (!uid || uid !== String(socket.userId)) {
-        console.warn("âڑ ï¸ڈ join-user ظ…ط±ظپظˆط¶: userId ظ„ط§ ظٹط·ط§ط¨ظ‚ ط§ظ„طھظˆظƒظ†", { uid, tokenUser: socket.userId });
+        console.warn("⚠️ join-user مرفوض: userId لا يطابق التوكن", { uid, tokenUser: socket.userId });
         return;
       }
 
@@ -510,7 +515,7 @@ io.on("connection", (socket) => {
     try {
       const conversationId = data?.conversationId;
       if (!conversationId) {
-        return socket.emit("message-error", { error: "conversationId ظ…ظپظ‚ظˆط¯" });
+        return socket.emit("message-error", { error: "conversationId مفقود" });
       }
 
       // âœ… ط§ظ„ظ…ط±ط³ظ„ ط§ظ„ط­ظ‚ظٹظ‚ظٹ ظ…ظ† ط§ظ„طھظˆظƒظ† ظپظ‚ط·
@@ -519,12 +524,12 @@ io.on("connection", (socket) => {
       // طھط£ظƒط¯ ظ…ظ† ط§ظ„ظ…ط­ط§ط¯ط«ط© + طµظ„ط§ط­ظٹط© ط§ظ„ظ…ط±ط³ظ„
       const conv = await Conversation.findById(conversationId);
       if (!conv) {
-        return socket.emit("message-error", { error: "ط§ظ„ظ…ط­ط§ط¯ط«ط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" });
+        return socket.emit("message-error", { error: "المحادثة غير موجودة" });
       }
 
       const isMember = (conv.participants || []).some((p) => String(p) === senderId);
       if (!isMember) {
-        return socket.emit("message-error", { error: "ظ„ط§ طھظ…ظ„ظƒ طµظ„ط§ط­ظٹط© ط¹ظ„ظ‰ ظ‡ط°ظ‡ ط§ظ„ظ…ط­ط§ط¯ط«ط©" });
+        return socket.emit("message-error", { error: "لا تملك صلاحية على هذه المحادثة" });
       }
 
       // ط§ظ„ظ…ط³طھظ‚ط¨ظ„ (ظ„ظ…ط­ط§ط¯ط«ط© ط«ظ†ط§ط¦ظٹط©) â€” ظ„ط§ ظ†ط«ظ‚ ط¨ط§ظ„ظ€ receiverId ط§ظ„ظ‚ط§ط¯ظ…
@@ -571,7 +576,7 @@ io.on("connection", (socket) => {
       const hasReply = !!replyTo && (hasText || hasFiles);
 
       if (!hasText && !hasFiles && !hasForward && !hasReply) {
-        return socket.emit("message-error", { error: "ظٹط¬ط¨ ط¥ط±ط³ط§ظ„ ظ†طµ ط£ظˆ ظ…ط±ظپظ‚ ظˆط§ط­ط¯ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„" });
+        return socket.emit("message-error", { error: "يجب إرسال نص أو مرفق واحد على الأقل" });
       }
       // âœ… طھط¬ظ‡ظٹط² ظ…ط­طھظˆظ‰ ط§ظ„ط±ط³ط§ظ„ط© ط§ظ„ظ†ظ‡ط§ط¦ظٹ (ط®طµظˆطµط§ظ‹ ظ„ظ„ظپظˆط±ظˆط§ط±ط¯)
       let finalText = text || "";
@@ -581,13 +586,13 @@ io.on("connection", (socket) => {
       if (hasForward) {
         const original = await Message.findById(forwardOf).lean();
         if (!original || original.deletedForAll) {
-          return socket.emit("message-error", { error: "ظ„ط§ ظٹظ…ظƒظ† طھط­ظˆظٹظ„ ظ‡ط°ظ‡ ط§ظ„ط±ط³ط§ظ„ط©" });
+          return socket.emit("message-error", { error: "لا يمكن تحويل هذه الرسالة" });
         }
 
         // طھط£ظƒط¯ ط¥ظ† ط§ظ„ظ…ط±ط³ظ„ ظٹظ…ظ„ظƒ طµظ„ط§ط­ظٹط© ط§ظ„ظˆطµظˆظ„ ظ„ظ„ط±ط³ط§ظ„ط© ط§ظ„ط£طµظ„ظٹط© (ط¹ط¶ظˆ ط¨ط§ظ„ظ…ط­ط§ط¯ط«ط© ط§ظ„ط£طµظ„ظٹط©)
         const canAccess = await Conversation.exists({ _id: original.conversation, participants: senderId });
         if (!canAccess) {
-          return socket.emit("message-error", { error: "ظ„ط§ ظٹظ…ظƒظ† طھط­ظˆظٹظ„ ظ‡ط°ظ‡ ط§ظ„ط±ط³ط§ظ„ط©" });
+          return socket.emit("message-error", { error: "لا يمكن تحويل هذه الرسالة" });
         }
 
         const oText = String(original.text || "");
@@ -640,7 +645,7 @@ io.on("connection", (socket) => {
           // ظ„ظˆ ط§ظ„ط£طµظ„ ظپظٹظ‡ ظ…ط±ظپظ‚ط§طھ (طµظˆطھ/طµظˆط±ط©/ظپظٹط¯ظٹظˆ/ظ…ظ„ظپ): ط§ظ†ظ‚ظ„ ط§ظ„ظ…ط±ظپظ‚ط§طھطŒ ظˆط§ظ„ظ†طµ ظٹطµط¨ط­ طھط¹ظ„ظٹظ‚ ظپظ‚ط·
           finalAttachments = oAttachments.length ? oAttachments : derivedAttachments;
           // ظ„ظˆ ظپظٹ ظ…ط±ظپظ‚ط§طھطŒ ظ†ط®ظ„ظٹ ط§ظ„ظ†طµ: طھط¹ظ„ظٹظ‚ + (ظ†طµ ط£طµظ„ظٹ ظ„ظˆ ظƒط§ظ† ظ…ظپظٹط¯)
-          const looksLikePlaceholder = oText.trim() === "ط±ط³ط§ظ„ط© طµظˆطھظٹط©" || oText.trim() === "ط±ط³ط§ظ„ط©" || oText.trim() === "";
+          const looksLikePlaceholder = oText.trim() === "رسالة صوتية" || oText.trim() === "رسالة" || oText.trim() === "";
           if (!looksLikePlaceholder) {
             finalText = cmt ? (cmt + "\n" + oText) : oText;
           } else {
@@ -710,7 +715,7 @@ const populatedMessage = await message.populate("sender", "username fullName ava
 
       socket.emit("message-sent", { success: true, messageId: message._id });
 
-      console.log("âœ… Socket message sent:", {
+      console.log("\u2705 Socket message sent:", {
         conversationId,
         type: msgType,
         from: senderId,
@@ -719,8 +724,8 @@ const populatedMessage = await message.populate("sender", "username fullName ava
         attachmentsCount: attachments.length,
       });
     } catch (error) {
-      console.error("â‌Œ Socket send-message error:", error);
-      socket.emit("message-error", { error: "ظپط´ظ„ ط¥ط±ط³ط§ظ„ ط§ظ„ط±ط³ط§ظ„ط©" });
+      console.error("\u274c Socket send-message error:", error);
+      socket.emit("message-error", { error: "فشل إرسال الرسالة" });
     }
   });
 
@@ -851,7 +856,7 @@ const populatedMessage = await message.populate("sender", "username fullName ava
   /* ===================================================================== */
   /* âœ… WebRTC Signaling Relay (offer/answer/ice) â€” Actual Media (Stage 2)  */
   /* ===================================================================== */
-  // ظ…ظ„ط§ط­ط¸ط©: ظ†ط­ظ† ظپظ‚ط· "ظ†ط±ط­ظ‘ظ„" SDP/ICE ط¹ط¨ط± Socket.io.  ظ„ط§ ظ†ط­ظپط¸ ط£ظٹ ط´ظٹط، ظپظٹ DB.
+  // ظ…ظ„ط§ط­ط¸ط©: ظ†ط­ظ† ظپظ‚ط· "نرحّل" SDP/ICE ط¹ط¨ط± Socket.io.  ظ„ط§ ظ†ط­ظپط¸ ط£ظٹ ط´ظٹط، ظپظٹ DB.
   // ط§ظ„ط؛ط±ظپط©: call:<callId> + ط¥ط±ط³ط§ظ„ ظ…ط¨ط§ط´ط± ط¹ط¨ط± user-<id> ط¥ظ† طھظˆظپظ‘ط± "to".
 
   
@@ -989,7 +994,7 @@ socket.on("call:join", ({ callId } = {}) => {
 
 
   socket.on("disconnect", () => {
-    console.log("â‌Œ ظ…ط³طھط®ط¯ظ… ط§ظ†ظ‚ط·ط¹:", socket.id);
+    console.log("❌ مستخدم انقطع:", socket.id);
     const uid = String(socket.joinedUserId || socket.userId || "").trim();
     if (!uid) return;
     const sockets = connectedUsers.get(uid);
@@ -1070,23 +1075,23 @@ function uploadAuthGuard(req, res, next) {
   if (ALLOW_PUBLIC_UPLOAD) return next();
 
   const authHeader = req.headers["authorization"];
-  if (!authHeader) return res.status(401).json({ msg: "ط¸â€‍ط·آ§ ط¸ظ¹ط¸ث†ط·آ¬ط·آ¯ ط·ع¾ط¸ث†ط¸ئ’ط¸â€  ط¸ظ¾ط¸ظ¹ ط·آ§ط¸â€‍ط¸â€،ط¸ظ¹ط·آ¯ط·آ±" });
+  if (!authHeader) return res.status(401).json({ msg: "\u0644\u0627 \u064a\u0648\u062c\u062f \u062a\u0648\u0643\u0646 \u0641\u064a \u0627\u0644\u0647\u064a\u062f\u0631" });
 
   const parts = authHeader.split(" ");
   if (parts.length !== 2 || parts[0] !== "Bearer") {
-    return res.status(401).json({ msg: "ط·ع¾ط¸â€ ط·آ³ط¸ظ¹ط¸â€ڑ ط·آ§ط¸â€‍ط·ع¾ط¸ث†ط¸ئ’ط¸â€  ط·ط›ط¸ظ¹ط·آ± ط·آµط·آ§ط¸â€‍ط·آ­" });
+    return res.status(401).json({ msg: "\u062A\u0646\u0633\u064A\u0642 \u0627\u0644\u062A\u0648\u0643\u0646 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D" });
   }
 
   const token = parts[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET_EFFECTIVE);
     const userId = decoded.id || decoded.userId || decoded._id;
-    if (!userId) return res.status(401).json({ msg: "ط·آ§ط¸â€‍ط·ع¾ط¸ث†ط¸ئ’ط¸â€  ط·ط›ط¸ظ¹ط·آ± ط·آµط·آ§ط¸â€‍ط·آ­" });
+    if (!userId) return res.status(401).json({ msg: "\u0627\u0644\u062A\u0648\u0643\u0646 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D" });
     req.userId = userId;
     req.user = { id: userId };
     next();
   } catch {
-    return res.status(401).json({ msg: "ط·آ§ط¸â€‍ط·ع¾ط¸ث†ط¸ئ’ط¸â€  ط·ط›ط¸ظ¹ط·آ± ط·آµط·آ§ط¸â€‍ط·آ­ ط·آ£ط¸ث† ط¸â€¦ط¸â€ ط·ع¾ط¸â€،ط¸ظ¹" });
+    return res.status(401).json({ msg: "\u0627\u0644\u062A\u0648\u0643\u0646 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D \u0623\u0648 \u0645\u0646\u062A\u0647\u064A" });
   }
 }
 
@@ -1120,10 +1125,10 @@ function runUpload(middleware) {
 app.post("/api/upload", uploadAuthGuard, runUpload(upload.any()), async (req, res) => {
   try {
     const f = Array.isArray(req.files) && req.files.length ? req.files[0] : null;
-    if (!f) return res.status(400).json({ msg: "ظ„ط§ ظٹظˆط¬ط¯ ظ…ظ„ظپ ظ…ط±ظپظˆط¹" });
+    if (!f) return res.status(400).json({ msg: "لا يوجد ملف مرفوع" });
 
     const url = buildUploadsUrlFromMulterFile(f);
-    const kind = detectKindFromMime(f.mimetype);
+    const kind = detectKindFromMime(f.mimetype, f.originalname || f.filename);
 
     return res.json({
       url,
@@ -1135,7 +1140,7 @@ app.post("/api/upload", uploadAuthGuard, runUpload(upload.any()), async (req, re
     });
   } catch (err) {
     console.error("POST /api/upload error:", err);
-    return res.status(500).json({ msg: "ظپط´ظ„ ط±ظپط¹ ط§ظ„ظ…ظ„ظپ" });
+    return res.status(500).json({ msg: "فشل رفع الملف" });
   }
 });
 
@@ -1146,12 +1151,12 @@ const authMiddleware = (req, res, next) => {
   const authHeader = req.headers["authorization"];
 
   if (!authHeader) {
-    return res.status(401).json({ msg: "ظ„ط§ ظٹظˆط¬ط¯ طھظˆظƒظ† ظپظٹ ط§ظ„ظ‡ظٹط¯ط±" });
+    return res.status(401).json({ msg: "لا يوجد توكن في الهيدر" });
   }
 
   const parts = authHeader.split(" ");
   if (parts.length !== 2 || parts[0] !== "Bearer") {
-    return res.status(401).json({ msg: "طھظ†ط³ظٹظ‚ ط§ظ„طھظˆظƒظ† ط؛ظٹط± طµط§ظ„ط­" });
+    return res.status(401).json({ msg: "تنسيق التوكن غير صالح" });
   }
 
   const token = parts[1];
@@ -1161,15 +1166,15 @@ const authMiddleware = (req, res, next) => {
 
     const userId = decoded.id || decoded.userId || decoded._id;
     if (!userId) {
-      console.error("JWT payload ط¨ط¯ظˆظ† userId:", decoded);
-      return res.status(401).json({ msg: "ط§ظ„طھظˆظƒظ† ط؛ظٹط± طµط§ظ„ط­" });
+      console.error("JWT payload بدون userId:", decoded);
+      return res.status(401).json({ msg: "التوكن غير صالح" });
     }
 
     req.userId = userId;
     next();
   } catch (err) {
     console.error("JWT verify error:", err);
-    return res.status(401).json({ msg: "ط§ظ„طھظˆظƒظ† ط؛ظٹط± طµط§ظ„ط­ ط£ظˆ ظ…ظ†طھظ‡ظٹ" });
+    return res.status(401).json({ msg: "التوكن غير صالح أو منتهي" });
   }
 
 };
@@ -1265,7 +1270,7 @@ app.get("/api/calls/rtc-config", authMiddleware, (req, res) => {
     return res.json({ iceServers });
   } catch (e) {
     console.error("GET /api/calls/rtc-config error:", e);
-    return res.status(500).json({ msg: "ط®ط·ط£ ط£ط«ظ†ط§ط، طھط¬ظ‡ظٹط² RTC config" });
+    return res.status(500).json({ msg: "خطأ أثناء تجهيز RTC config" });
   }
 });
 
@@ -1343,12 +1348,12 @@ app.post(
           : "voice.webm";
 
       if (!dataUrl) {
-        return res.status(400).json({ msg: "ظ„ط§ ظٹظˆط¬ط¯ ظ…ظ„ظپ طµظˆطھظٹ ظ…ط±ظپظˆط¹" });
+        return res.status(400).json({ msg: "لا يوجد ملف صوتي مرفوع" });
       }
 
       const savedUrl = await saveDataUrlToUploads(dataUrl, mimeType, originalName, String(req.userId || ""));
       if (!savedUrl) {
-        return res.status(400).json({ msg: "طµظٹط؛ط© ط§ظ„طµظˆطھ ط؛ظٹط± ظ…ط¯ط¹ظˆظ…ط©" });
+        return res.status(400).json({ msg: "صيغة الصوت غير مدعومة" });
       }
 
       const durationRaw2 = req.body?.duration ?? req.body?.voiceDuration ?? 0;
@@ -1364,7 +1369,7 @@ app.post(
       });
     } catch (err) {
       console.error("POST /api/chat/upload-audio error:", err);
-      return res.status(500).json({ msg: "ظپط´ظ„ ط±ظپط¹ ط§ظ„طµظˆطھ" });
+      return res.status(500).json({ msg: "فشل رفع الصوت" });
     }
   }
 );
@@ -1399,10 +1404,10 @@ app.post(
         if (Array.isArray(arr) && arr.length) f = arr[0];
       }
 
-      if (!f) return res.status(400).json({ msg: "ط§ظ„ظ…ظ„ظپ ظ…ط·ظ„ظˆط¨" });
+      if (!f) return res.status(400).json({ msg: "الملف مطلوب" });
 
       const url = buildUploadsUrlFromMulterFile(f);
-      const kind = detectKindFromMime(f.mimetype);
+      const kind = detectKindFromMime(f.mimetype, f.originalname || f.filename);
 
       return res.status(201).json({
         attachment: {
@@ -1416,7 +1421,7 @@ app.post(
       });
     } catch (err) {
       console.error("POST /api/chat/upload/attachment error:", err);
-      return res.status(500).json({ msg: "ظپط´ظ„ ط±ظپط¹ ط§ظ„ظ…ظ„ظپ" });
+      return res.status(500).json({ msg: "فشل رفع الملف" });
     }
   }
 );
@@ -1427,18 +1432,18 @@ const adminMiddleware = async (req, res, next) => {
     const user = await User.findById(req.userId);
 
     if (!user) {
-      return res.status(401).json({ msg: "ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+      return res.status(401).json({ msg: "المستخدم غير موجود" });
     }
 
     if (!user.isAdmin) {
-      return res.status(403).json({ msg: "ظ„ط§ طھظ…ظ„ظƒ طµظ„ط§ط­ظٹط© ط§ظ„ط¯ط®ظˆظ„ (ظ‡ط°ط§ ط§ظ„ط­ط³ط§ط¨ ظ„ظٹط³ ظ…ط´ط±ظپط§ظ‹)" });
+      return res.status(403).json({ msg: "لا تملك صلاحية الدخول (هذا الحساب ليس مشرفاً)" });
     }
 
     req.currentUser = user;
     next();
   } catch (err) {
     console.error("adminMiddleware error:", err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„طھط­ظ‚ظ‚ ظ…ظ† طµظ„ط§ط­ظٹط§طھ ط§ظ„ظ…ط´ط±ظپ" });
+    res.status(500).json({ msg: "خطأ في التحقق من صلاحيات المشرف" });
   }
 };
 
@@ -1455,17 +1460,17 @@ const normalizeUsername = (u) =>
 
 // ===== Username (English only) + Public ID helpers =====
 const ARABIC_MAP = {
-  "ط§": "a", "ط£": "a", "ط¥": "i", "ط¢": "a",
-  "ط¨": "b", "طھ": "t", "ط«": "th", "ط¬": "j",
-  "ط­": "h", "ط®": "kh", "ط¯": "d", "ط°": "dh",
-  "ط±": "r", "ط²": "z", "ط³": "s", "ط´": "sh",
-  "طµ": "s", "ط¶": "d", "ط·": "t", "ط¸": "z",
-  "ط¹": "a", "ط؛": "gh", "ظپ": "f", "ظ‚": "q",
-  "ظƒ": "k", "ظ„": "l", "ظ…": "m", "ظ†": "n",
-  "ظ‡": "h", "ظˆ": "w", "ظٹ": "y", "ظ‰": "a",
-  "ط©": "h", "ط¤": "w", "ط¦": "y", "ط،": "",
-  "ظ ": "0","ظ،": "1","ظ¢": "2","ظ£": "3","ظ¤": "4","ظ¥": "5","ظ¦": "6","ظ§": "7","ظ¨": "8","ظ©": "9",
-  "غ°": "0","غ±": "1","غ²": "2","غ³": "3","غ´": "4","غµ": "5","غ¶": "6","غ·": "7","غ¸": "8","غ¹": "9",
+  "ا": "a", "أ": "a", "إ": "i", "آ": "a",
+  "ب": "b", "ت": "t", "ث": "th", "ج": "j",
+  "ح": "h", "خ": "kh", "د": "d", "ذ": "dh",
+  "ر": "r", "ز": "z", "س": "s", "ش": "sh",
+  "ص": "s", "ض": "d", "ط": "t", "ظ": "z",
+  "ع": "a", "غ": "gh", "ف": "f", "ق": "q",
+  "ك": "k", "ل": "l", "م": "m", "ن": "n",
+  "ه": "h", "و": "w", "ي": "y", "ى": "a",
+  "ة": "h", "ؤ": "w", "ئ": "y", "ء": "",
+  "٠": "0","١": "1","٢": "2","٣": "3","٤": "4","٥": "5","٦": "6","٧": "7","٨": "8","٩": "9",
+  "۰": "0","۱": "1","۲": "2","۳": "3","۴": "4","۵": "5","۶": "6","۷": "7","۸": "8","۹": "9",
   " ": "_"
 };
 
@@ -1540,7 +1545,7 @@ const FALLBACK_LOCAL_MONGO = "mongodb://127.0.0.1:27017/socialapp";
 
 // âœ… ظ…ظ„ط§ط­ط¸ط© ظ…ظ‡ظ…ظ‘ط© (ط³ط¨ط¨ ط§ظ„ظ…ط´ظƒظ„ط© ط§ظ„ظ„ظٹ ط¹ظ†ط¯ظƒ ط؛ط§ظ„ط¨ط§ظ‹):
 // ط¥ط°ط§ dotenv ظ…ط§ ظ‚ط±ط£ .env (ظ„ط£ظ†ظƒ ط´ط؛ظ‘ظ„طھ ط§ظ„ط³ظٹط±ظپط± ظ…ظ† ظ…ط³ط§ط± ظ…ط®طھظ„ظپ ط¨ط¹ط¯ ط¥ط¹ط§ط¯ط© ط§ظ„طھط´ط؛ظٹظ„)
-// ظˆظ‚طھظ‡ط§ MONGO_URI ط¨طھظƒظˆظ† ظپط§ط¶ظٹط© ظˆط§ظ„ط³ظٹط±ظپط± ط¨ظٹظ‚ط¹ ط¹ظ„ظ‰ ظ‚ط§ط¹ط¯ط© ظ…ط­ظ„ظٹط© ظ…ط®طھظ„ظپط© â†’ ط§ظ„ظ…ظ†ط´ظˆط±ط§طھ "طھط®طھظپظٹ".
+// ظˆظ‚طھظ‡ط§ MONGO_URI ط¨طھظƒظˆظ† ظپط§ط¶ظٹط© ظˆط§ظ„ط³ظٹط±ظپط± ط¨ظٹظ‚ط¹ ط¹ظ„ظ‰ ظ‚ط§ط¹ط¯ط© ظ…ط­ظ„ظٹط© ظ…ط®طھظ„ظپط© â†’ ط§ظ„ظ…ظ†ط´ظˆط±ط§طھ "تختفي".
 // ظ„ط°ظ„ظƒ: ط¥ظ…ظ‘ط§ طھط¶ط¨ط· MONGO_URI ط¯ط§ط¦ظ…ط§ظ‹طŒ ط£ظˆ ظپط¹ظ‘ظ„ ط§ظ„ط³ظ…ط§ط­ ظ„ظ„ظ…ط­ظ„ظٹ طµط±ط§ط­ط©ظ‹ ط¹ط¨ط± ALLOW_LOCAL_MONGO=1.
 const MONGO_URI =
   process.env.MONGO_URI ||
@@ -1549,7 +1554,7 @@ const MONGO_URI =
 
 if (!MONGO_URI) {
   console.error(
-    "â‌Œ MONGO_URI ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©. ط¶ط¹ظ‡ط§ ظپظٹ ظ…ظ„ظپ .env ط¨ط¬ط§ظ†ط¨ server.js ط£ظˆ ظپط¹ظ‘ظ„ ALLOW_LOCAL_MONGO=1 ظ„ظ„ط³ظ…ط§ط­ ط¨ط§ظ„ظ…ط­ظ„ظٹ."
+    "❌ MONGO_URI غير موجودة. ضعها في ملف .env بجانب server.js أو فعّل ALLOW_LOCAL_MONGO=1 للسماح بالمحلي."
   );
   process.exit(1);
 }
@@ -1558,8 +1563,8 @@ mongoose
   .connect(MONGO_URI)
   .then(() => {
     const c = mongoose.connection;
-    console.log("âœ… طھظ… ط§ظ„ط§طھطµط§ظ„ ط¨ظ‚ط§ط¹ط¯ط© ط§ظ„ط¨ظٹط§ظ†ط§طھ");
-    console.log("ًں—„ï¸ڈ DB:", {
+    console.log("✅ تم الاتصال بقاعدة البيانات");
+    console.log("\u2705 DB:", {
       name: c?.name,
       host: c?.host,
       port: c?.port,
@@ -1568,10 +1573,10 @@ mongoose
 
     // طھط­ط°ظٹط± ظˆط§ط¶ط­ ظ„ظˆ ظƒظ†طھ ط¹ظ„ظ‰ ط§ظ„ظ‚ط§ط¹ط¯ط© ط§ظ„ظ…ط­ظ„ظٹط© (ظٹط³ظ‡ظ‘ظ„ ط§ظƒطھط´ط§ظپ ط³ط¨ط¨ ط§ط®طھظپط§ط، ط§ظ„ظ…ظ†ط´ظˆط±ط§طھ)
     if (String(MONGO_URI).includes("127.0.0.1") || String(MONGO_URI).includes("localhost")) {
-      console.warn("âڑ ï¸ڈ ط£ظ†طھ ظ…طھطµظ„ ط¨ظ‚ط§ط¹ط¯ط© ظ…ط­ظ„ظٹط©. ط¥ط°ط§ ظƒظ†طھ طھطھظˆظ‚ط¹ ط¨ظٹط§ظ†ط§طھ Atlas طھط£ظƒط¯ ظ…ظ† MONGO_URI ظپظٹ .env.");
+      console.warn("⚠️ أنت متصل بقاعدة محلية. إذا كنت تتوقع بيانات Atlas تأكد من MONGO_URI في .env.");
     }
   })
-  .catch((err) => console.error("â‌Œ MongoDB Error:", err));
+  .catch((err) => console.error("\u274c MongoDB Error:", err));
 // ================== ط±ط§ظˆطھ ط§ط®طھط¨ط§ط± ==================
 app.get("/api/test", (req, res) => {
   res.json({ msg: "API working" });
@@ -1599,18 +1604,18 @@ app.post("/api/register", async (req, res) => {
     const displayName = String(fullName || name || "").trim();
     const baseUsername = toEnglishHandle(username || "");
     if (!baseUsername) {
-      return res.status(400).json({ msg: "ظٹط±ط¬ظ‰ ط§ط®طھظٹط§ط± ط§ط³ظ… ظ…ط³طھط®ط¯ظ… ط¨ط§ظ„ط¥ظ†ظƒظ„ظٹط²ظٹ" });
+      return res.status(400).json({ msg: "يرجى اختيار اسم مستخدم بالإنكليزي" });
     }
     const finalUsername = await ensureUniqueUsername(baseUsername);
     const finalBirthdate = birthdate || birthDate;
 
     if (!finalUsername || !emailNorm || !password) {
-      return res.status(400).json({ msg: "ظٹط±ط¬ظ‰ طھط¹ط¨ط¦ط© ط¬ظ…ظٹط¹ ط§ظ„ط¨ظٹط§ظ†ط§طھ" });
+      return res.status(400).json({ msg: "يرجى تعبئة جميع البيانات" });
     }
 
     const exists = await User.findOne({ email: emailNorm });
     if (exists) {
-      return res.status(400).json({ msg: "ظ‡ط°ط§ ط§ظ„ط¨ط±ظٹط¯ ظ…ط³طھط®ط¯ظ… ظ…ط³ط¨ظ‚ط§ظ‹" });
+      return res.status(400).json({ msg: "هذا البريد مستخدم مسبقاً" });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -1628,10 +1633,10 @@ app.post("/api/register", async (req, res) => {
 
     await newUser.save();
 
-    res.json({ msg: "طھظ… ط¥ظ†ط´ط§ط، ط§ظ„ط­ط³ط§ط¨ ط¨ظ†ط¬ط§ط­" });
+    res.json({ msg: "تم إنشاء الحساب بنجاح" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ…" });
+    res.status(500).json({ msg: "خطأ في الخادم" });
   }
 });
 
@@ -1644,7 +1649,7 @@ app.post("/api/login", async (req, res) => {
 
     const loginId = (identifier || email || "").toString().trim();
     if (!loginId || !password) {
-      return res.status(400).json({ msg: "ط§ظ„ط±ط¬ط§ط، ط¥ط¯ط®ط§ظ„ ط§ظ„ط¨ط±ظٹط¯/ط§ط³ظ… ط§ظ„ظ…ط³طھط®ط¯ظ… ظˆظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط±" });
+      return res.status(400).json({ msg: "الرجاء إدخال البريد/اسم المستخدم وكلمة المرور" });
     }
 
     let query;
@@ -1656,12 +1661,12 @@ app.post("/api/login", async (req, res) => {
 
     const user = await User.findOne(query);
     if (!user) {
-      return res.status(400).json({ msg: "ط§ظ„ط¨ط±ظٹط¯ ط£ظˆ ط§ط³ظ… ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ط³ط¬ظ„" });
+      return res.status(400).json({ msg: "البريد أو اسم المستخدم غير مسجل" });
     }
 
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
-        return res.status(400).json({ msg: "ظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط± ط؛ظٹط± طµط­ظٹط­ط©" });
+        return res.status(400).json({ msg: "كلمة المرور غير صحيحة" });
       }
 
       await ensurePublicIdForUser(user);
@@ -1669,7 +1674,7 @@ app.post("/api/login", async (req, res) => {
       const token = jwt.sign({ id: user._id }, JWT_SECRET_EFFECTIVE, { expiresIn: "7d" });
 
       res.json({
-        msg: "طھظ… طھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„ ط¨ظ†ط¬ط§ط­",
+        msg: "تم تسجيل الدخول بنجاح",
         token,
         user: {
           id: user._id,
@@ -1683,7 +1688,7 @@ app.post("/api/login", async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ…" });
+    res.status(500).json({ msg: "خطأ في الخادم" });
   }
 });
 
@@ -1697,17 +1702,17 @@ app.post("/api/auth/register", async (req, res) => {
     const displayName = String(fullName || name || "").trim();
     const baseUsername = toEnglishHandle(username || "");
     if (!baseUsername) {
-      return res.status(400).json({ msg: "ظٹط±ط¬ظ‰ ط§ط®طھظٹط§ط± ط§ط³ظ… ظ…ط³طھط®ط¯ظ… ط¨ط§ظ„ط¥ظ†ظƒظ„ظٹط²ظٹ" });
+      return res.status(400).json({ msg: "يرجى اختيار اسم مستخدم بالإنكليزي" });
     }
     const finalUsername = await ensureUniqueUsername(baseUsername);
     const finalBirthdate = birthdate || birthDate;
     if (!finalUsername || !emailNorm || !password) {
-      return res.status(400).json({ msg: "ظٹط±ط¬ظ‰ طھط¹ط¨ط¦ط© ط¬ظ…ظٹط¹ ط§ظ„ط¨ظٹط§ظ†ط§طھ" });
+      return res.status(400).json({ msg: "يرجى تعبئة جميع البيانات" });
     }
 
     const exists = await User.findOne({ email: emailNorm });
     if (exists) {
-      return res.status(400).json({ msg: "ظ‡ط°ط§ ط§ظ„ط¨ط±ظٹط¯ ظ…ط³طھط®ط¯ظ… ظ…ط³ط¨ظ‚ط§ظ‹" });
+      return res.status(400).json({ msg: "هذا البريد مستخدم مسبقاً" });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -1726,11 +1731,11 @@ app.post("/api/auth/register", async (req, res) => {
     await newUser.save();
 
     res.json({
-      msg: "طھظ… ط¥ظ†ط´ط§ط، ط§ظ„ط­ط³ط§ط¨ ط¨ظ†ط¬ط§ط­ âœ… ظٹظ…ظƒظ†ظƒ طھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„ ط§ظ„ط¢ظ†. (ط§ظ„طھظپط¹ظٹظ„ ط¹ط¨ط± ط§ظ„ط¨ط±ظٹط¯ ط؛ظٹط± ظ…ظپط¹ظ‘ظ„ ط­ط§ظ„ظٹط§ظ‹)"
+      msg: "تم إنشاء الحساب بنجاح ✅ يمكنك تسجيل الدخول الآن. (التفعيل عبر البريد غير مفعّل حالياً)"
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ…" });
+    res.status(500).json({ msg: "خطأ في الخادم" });
   }
 });
 
@@ -1742,7 +1747,7 @@ app.post("/api/auth/login", async (req, res) => {
     const loginId = (identifier || email || username || "").toString().trim();
 
     if (!loginId || !password) {
-      return res.status(400).json({ msg: "ط§ظ„ط±ط¬ط§ط، ط¥ط¯ط®ط§ظ„ ط§ظ„ط¨ط±ظٹط¯/ط§ط³ظ… ط§ظ„ظ…ط³طھط®ط¯ظ… ظˆظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط±" });
+      return res.status(400).json({ msg: "الرجاء إدخال البريد/اسم المستخدم وكلمة المرور" });
     }
 
     let query;
@@ -1755,12 +1760,12 @@ app.post("/api/auth/login", async (req, res) => {
     const user = await User.findOne(query);
 
     if (!user) {
-      return res.status(400).json({ msg: "ط§ظ„ط¨ط±ظٹط¯ ط£ظˆ ط§ط³ظ… ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ط³ط¬ظ„" });
+      return res.status(400).json({ msg: "البريد أو اسم المستخدم غير مسجل" });
     }
 
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
-        return res.status(400).json({ msg: "ظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط± ط؛ظٹط± طµط­ظٹط­ط©" });
+        return res.status(400).json({ msg: "كلمة المرور غير صحيحة" });
       }
 
       await ensurePublicIdForUser(user);
@@ -1768,7 +1773,7 @@ app.post("/api/auth/login", async (req, res) => {
       const token = jwt.sign({ id: user._id }, JWT_SECRET_EFFECTIVE, { expiresIn: "7d" });
 
       res.json({
-        msg: "طھظ… طھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„ ط¨ظ†ط¬ط§ط­",
+        msg: "تم تسجيل الدخول بنجاح",
         token,
         user: {
           id: user._id,
@@ -1783,7 +1788,7 @@ app.post("/api/auth/login", async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ…" });
+    res.status(500).json({ msg: "خطأ في الخادم" });
   }
 });
 
@@ -1795,22 +1800,22 @@ app.post("/api/auth/resend-verify-email", async (req, res) => {
     const emailNorm = normalizeEmail(email);
 
     if (!emailNorm) {
-      return res.status(400).json({ msg: "ظٹط±ط¬ظ‰ ط¥ط±ط³ط§ظ„ ط§ظ„ط¨ط±ظٹط¯ ط§ظ„ط¥ظ„ظƒطھط±ظˆظ†ظٹ" });
+      return res.status(400).json({ msg: "يرجى إرسال البريد الإلكتروني" });
     }
 
     const user = await User.findOne({ email: emailNorm });
     if (!user) {
-      return res.status(400).json({ msg: "ظ‡ط°ط§ ط§ظ„ط¨ط±ظٹط¯ ط؛ظٹط± ظ…ط³ط¬ظ„ ظ„ط¯ظٹظ†ط§" });
+      return res.status(400).json({ msg: "هذا البريد غير مسجل لدينا" });
     }
 
     console.log("Verify email requested (not configured). Email:", emailNorm);
 
     return res.json({
-      msg: "ظ…ظٹط²ط© ط§ظ„طھظپط¹ظٹظ„ ط¹ط¨ط± ط§ظ„ط¨ط±ظٹط¯ ط؛ظٹط± ظ…ظپط¹ظ‘ظ„ط© ط­ط§ظ„ظٹط§ظ‹. طھظ… طھط³ط¬ظٹظ„ ط·ظ„ط¨ظƒ ظپظ‚ط· (طھط¬ط±ظٹط¨ظٹط§ظ‹)."
+      msg: "ميزة التفعيل عبر البريد غير مفعّلة حالياً. تم تسجيل طلبك فقط (تجريبياً)."
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ…" });
+    res.status(500).json({ msg: "خطأ في الخادم" });
   }
 });
 
@@ -1837,7 +1842,7 @@ app.get("/api/users/search", authMiddleware, async (req, res) => {
     return res.json({ users });
   } catch (e) {
     console.error("GET /api/users/search error:", e);
-    return res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ظپظٹ ط§ظ„ط¨ط­ط«" });
+    return res.status(500).json({ msg: "حدث خطأ في البحث" });
   }
 });
 
@@ -1859,7 +1864,7 @@ app.get("/api/users/:id", authMiddlewareOptional, async (req, res) => {
         "publicId username fullName avatar createdAt followers following bio location website isPrivate blockedUsers"
       );
     }
-    if (!u) return res.status(404).json({ msg: "ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!u) return res.status(404).json({ msg: "المستخدم غير موجود" });
     await ensurePublicIdForUser(u);
 
     const postsCount = await Post.countDocuments({ user: u._id });
@@ -1904,7 +1909,7 @@ app.get("/api/users/:id", authMiddlewareOptional, async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ…" });
+    res.status(500).json({ msg: "خطأ في الخادم" });
   }
 });
 
@@ -1912,10 +1917,10 @@ app.get("/api/users/:id", authMiddlewareOptional, async (req, res) => {
 app.get("/api/profile", authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    if (!userId) return res.status(401).json({ msg: "ط؛ظٹط± ظ…طµط±ط­" });
+    if (!userId) return res.status(401).json({ msg: "غير مصرح" });
 
     const user = await User.findById(userId).select("-password");
-    if (!user) return res.status(404).json({ msg: "ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!user) return res.status(404).json({ msg: "المستخدم غير موجود" });
     await ensurePublicIdForUser(user);
 
     const postsCount = await Post.countDocuments({ user: userId });
@@ -1941,7 +1946,7 @@ app.get("/api/profile", authMiddleware, async (req, res) => {
     });
   } catch (err) {
     console.error("ERROR in GET /api/profile:", err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ…" });
+    res.status(500).json({ msg: "خطأ في الخادم" });
   }
 });
 
@@ -1961,15 +1966,15 @@ app.patch("/api/users/me/privacy", authMiddleware, async (req, res) => {
       "username fullName email avatar isPrivate"
     );
 
-    if (!user) return res.status(404).json({ msg: "ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!user) return res.status(404).json({ msg: "المستخدم غير موجود" });
 
     res.json({
-      msg: isPrivate ? "طھظ… ط¶ط¨ط· ط§ظ„ط­ط³ط§ط¨ ظƒط­ط³ط§ط¨ ط®ط§طµ" : "طھظ… ط¶ط¨ط· ط§ظ„ط­ط³ط§ط¨ ظƒط­ط³ط§ط¨ ط¹ط§ظ…",
+      msg: isPrivate ? "تم ضبط الحساب كحساب خاص" : "تم ضبط الحساب كحساب عام",
       isPrivate: !!user.isPrivate,
     });
   } catch (err) {
     console.error("ERROR in PATCH /api/users/me/privacy:", err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ… ط£ط«ظ†ط§ط، طھط¹ط¯ظٹظ„ ط®طµظˆطµظٹط© ط§ظ„ط­ط³ط§ط¨" });
+    res.status(500).json({ msg: "خطأ في الخادم أثناء تعديل خصوصية الحساب" });
   }
 });
 
@@ -1990,7 +1995,7 @@ app.put("/api/profile", authMiddleware, upload.single("avatar"), async (req, res
     if (typeof username === "string" && username.trim()) {
       const base = toEnglishHandle(username);
       if (!base || base.length < 3) {
-        return res.status(400).json({ msg: "ط§ط³ظ… ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± طµط§ظ„ط­" });
+        return res.status(400).json({ msg: "اسم المستخدم غير صالح" });
       }
       const finalUsername = await ensureUniqueUsername(base, userId);
       updateData.username = finalUsername;
@@ -2001,11 +2006,11 @@ app.put("/api/profile", authMiddleware, upload.single("avatar"), async (req, res
     if (avatarPath) updateData.avatar = avatarPath;
 
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true }).select("-password");
-    if (!updatedUser) return res.status(404).json({ msg: "ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!updatedUser) return res.status(404).json({ msg: "المستخدم غير موجود" });
     await ensurePublicIdForUser(updatedUser);
 
       res.json({
-        msg: "طھظ… طھط­ط¯ظٹط« ط§ظ„ط¨ط±ظˆظپط§ظٹظ„ ط¨ظ†ط¬ط§ط­",
+        msg: "تم تحديث البروفايل بنجاح",
         user: {
           _id: updatedUser._id,
           publicId: updatedUser.publicId || "",
@@ -2021,7 +2026,7 @@ app.put("/api/profile", authMiddleware, upload.single("avatar"), async (req, res
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ… ط£ط«ظ†ط§ط، طھط­ط¯ظٹط« ط§ظ„ط¨ط±ظˆظپط§ظٹظ„" });
+    res.status(500).json({ msg: "خطأ في الخادم أثناء تحديث البروفايل" });
   }
 });
 
@@ -2032,14 +2037,14 @@ app.post("/api/users/:id/follow", authMiddleware, async (req, res) => {
     const currentUserId = req.userId;
 
     if (String(targetUserId) === String(currentUserId)) {
-      return res.status(400).json({ msg: "ظ„ط§ ظٹظ…ظƒظ†ظƒ ظ…طھط§ط¨ط¹ط© ظ†ظپط³ظƒ" });
+      return res.status(400).json({ msg: "لا يمكنك متابعة نفسك" });
     }
 
     const targetUser = await User.findById(targetUserId);
     const currentUser = await User.findById(currentUserId);
 
     if (!targetUser || !currentUser) {
-      return res.status(404).json({ msg: "ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+      return res.status(404).json({ msg: "المستخدم غير موجود" });
     }
 
     const ensureArr = (v) => (Array.isArray(v) ? v : []);
@@ -2055,7 +2060,7 @@ app.post("/api/users/:id/follow", authMiddleware, async (req, res) => {
       await targetUser.save();
 
       return res.json({
-        msg: "طھظ… ط¥ظ„ط؛ط§ط، ط§ظ„ظ…طھط§ط¨ط¹ط©",
+        msg: "تم إلغاء المتابعة",
         following: false,
         followersCount: targetUser.followers.length,
         followingCount: currentUser.following.length,
@@ -2067,7 +2072,7 @@ app.post("/api/users/:id/follow", authMiddleware, async (req, res) => {
       await targetUser.save();
 
       return res.json({
-        msg: "طھظ…طھ ط§ظ„ظ…طھط§ط¨ط¹ط©",
+        msg: "تمت المتابعة",
         following: true,
         followersCount: targetUser.followers.length,
         followingCount: currentUser.following.length,
@@ -2075,7 +2080,7 @@ app.post("/api/users/:id/follow", authMiddleware, async (req, res) => {
     }
   } catch (err) {
     console.error("ERROR in /api/users/:id/follow:", err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ…" });
+    res.status(500).json({ msg: "خطأ في الخادم" });
   }
 });
 
@@ -2086,14 +2091,14 @@ app.post("/api/users/:id/block-toggle", authMiddleware, async (req, res) => {
     const currentUserId = req.userId;
 
     if (String(targetUserId) === String(currentUserId)) {
-      return res.status(400).json({ msg: "ظ„ط§ ظٹظ…ظƒظ†ظƒ ط­ط¸ط± ط­ط³ط§ط¨ظƒ ط§ظ„ط´ط®طµظٹ" });
+      return res.status(400).json({ msg: "لا يمكنك حظر حسابك الشخصي" });
     }
 
     const currentUser = await User.findById(currentUserId);
     const targetUser = await User.findById(targetUserId);
 
     if (!currentUser || !targetUser) {
-      return res.status(404).json({ msg: "ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+      return res.status(404).json({ msg: "المستخدم غير موجود" });
     }
 
     currentUser.blockedUsers = ensureArray(currentUser.blockedUsers);
@@ -2124,13 +2129,13 @@ app.post("/api/users/:id/block-toggle", authMiddleware, async (req, res) => {
     await targetUser.save();
 
     return res.json({
-      msg: blocked ? "طھظ… ط­ط¸ط± ظ‡ط°ط§ ط§ظ„ظ…ط³طھط®ط¯ظ…طŒ ظ„ظ† ظٹط³طھط·ظٹط¹ ط§ظ„طھظپط§ط¹ظ„ ظ…ط¹ظƒ âœ…" : "طھظ… ط¥ظ„ط؛ط§ط، ط­ط¸ط± ظ‡ط°ط§ ط§ظ„ظ…ط³طھط®ط¯ظ… âœ…",
+      msg: blocked ? "تم حظر هذا المستخدم، لن يستطيع التفاعل معك ✅" : "تم إلغاء حظر هذا المستخدم ✅",
       blocked,
       blockedCount: currentUser.blockedUsers.length,
     });
   } catch (err) {
     console.error("ERROR in /api/users/:id/block-toggle:", err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ… ط£ط«ظ†ط§ط، طھط­ط¯ظٹط« ط§ظ„ط­ط¸ط±" });
+    res.status(500).json({ msg: "خطأ في الخادم أثناء تحديث الحظر" });
   }
 });
 
@@ -2146,12 +2151,12 @@ app.get("/api/users/:id/followers", authMiddlewareOptional, async (req, res) => 
       .populate("followers", "username fullName email avatar createdAt")
       .select("_id");
 
-    if (!user) return res.status(404).json({ msg: "ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!user) return res.status(404).json({ msg: "المستخدم غير موجود" });
 
     return res.json(user.followers || []);
   } catch (err) {
     console.error("GET /api/users/:id/followers error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¬ظ„ط¨ ظ‚ط§ط¦ظ…ط© ط§ظ„ظ…طھط§ط¨ط¹ظٹظ†" });
+    res.status(500).json({ msg: "حدث خطأ أثناء جلب قائمة المتابعين" });
   }
 });
 
@@ -2163,12 +2168,12 @@ app.get("/api/users/:id/following", authMiddlewareOptional, async (req, res) => 
       .populate("following", "username fullName email avatar createdAt")
       .select("_id");
 
-    if (!user) return res.status(404).json({ msg: "ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!user) return res.status(404).json({ msg: "المستخدم غير موجود" });
 
     return res.json(user.following || []);
   } catch (err) {
     console.error("GET /api/users/:id/following error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¬ظ„ط¨ ظ‚ط§ط¦ظ…ط© طھطھط§ط¨ظگط¹" });
+    res.status(500).json({ msg: "حدث خطأ أثناء جلب قائمة تتابِع" });
   }
 });
 
@@ -2179,14 +2184,14 @@ app.delete("/api/users/:id/followers/:followerId", authMiddleware, async (req, r
     const currentUserId = req.userId;
 
     if (String(profileOwnerId) !== String(currentUserId)) {
-      return res.status(403).json({ msg: "ط؛ظٹط± ظ…ط³ظ…ظˆط­ ط¥ط²ط§ظ„ط© ظ…طھط§ط¨ط¹ ظ…ظ† ط­ط³ط§ط¨ ط´ط®طµ ط¢ط®ط±" });
+      return res.status(403).json({ msg: "غير مسموح إزالة متابع من حساب شخص آخر" });
     }
 
     const profileUser = await User.findById(profileOwnerId);
     const followerUser = await User.findById(followerId);
 
     if (!profileUser || !followerUser) {
-      return res.status(404).json({ msg: "ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+      return res.status(404).json({ msg: "المستخدم غير موجود" });
     }
 
     const ensureArr = (v) => (Array.isArray(v) ? v : []);
@@ -2200,7 +2205,7 @@ app.delete("/api/users/:id/followers/:followerId", authMiddleware, async (req, r
 
     if (profileUser.followers.length === beforeCount) {
       return res.status(400).json({
-        msg: "ظ‡ط°ط§ ط§ظ„ظ…ط³طھط®ط¯ظ… ظ„ظٹط³ ط¶ظ…ظ† ظ…طھط§ط¨ط¹ظٹظƒ",
+        msg: "هذا المستخدم ليس ضمن متابعيك",
         followersCount: profileUser.followers.length,
       });
     }
@@ -2209,12 +2214,12 @@ app.delete("/api/users/:id/followers/:followerId", authMiddleware, async (req, r
     await followerUser.save();
 
     return res.json({
-      msg: "طھظ…طھ ط¥ط²ط§ظ„ط© ط§ظ„ظ…طھط§ط¨ط¹",
+      msg: "تمت إزالة المتابع",
       followersCount: profileUser.followers.length,
     });
   } catch (err) {
     console.error("DELETE /api/users/:id/followers/:followerId error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¥ط²ط§ظ„ط© ط§ظ„ظ…طھط§ط¨ط¹" });
+    res.status(500).json({ msg: "حدث خطأ أثناء إزالة المتابع" });
   }
 });
 
@@ -2237,7 +2242,7 @@ app.get("/api/stories/feed", authMiddlewareOptional, async (req, res) => {
       return {
         id: s._id,
         userId: s.user?._id,
-        userName: s.user?.username || "ظ…ط³طھط®ط¯ظ… Saepel",
+        userName: s.user?.username || "مستخدم Saepel",
         avatar: s.user?.avatar || "",
         mediaUrl: s.mediaUrl,
         mediaType: s.mediaType || "image",
@@ -2251,7 +2256,7 @@ app.get("/api/stories/feed", authMiddlewareOptional, async (req, res) => {
     res.json(payload);
   } catch (err) {
     console.error("GET /api/stories/feed error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¬ظ„ط¨ ط§ظ„ظ‚طµطµ" });
+    res.status(500).json({ msg: "حدث خطأ أثناء جلب القصص" });
   }
 });
 
@@ -2266,7 +2271,7 @@ app.post("/api/stories", authMiddleware, upload.single("media"), async (req, res
       if (req.file.mimetype.startsWith("video/")) mediaType = "video";
     }
 
-    if (!mediaUrl) return res.status(400).json({ msg: "ظٹط¬ط¨ ط¥ط±ظپط§ظ‚ طµظˆط±ط© ط£ظˆ ظپظٹط¯ظٹظˆ" });
+    if (!mediaUrl) return res.status(400).json({ msg: "يجب إرفاق صورة أو فيديو" });
 
     const text = (req.body.text || "").trim();
 
@@ -2277,10 +2282,10 @@ app.post("/api/stories", authMiddleware, upload.single("media"), async (req, res
       text,
     });
 
-    res.status(201).json({ msg: "طھظ… ط¥ظ†ط´ط§ط، ط§ظ„ظ‚طµط© ط¨ظ†ط¬ط§ط­", id: story._id });
+    res.status(201).json({ msg: "تم إنشاء القصة بنجاح", id: story._id });
   } catch (err) {
     console.error("POST /api/stories error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¥ظ†ط´ط§ط، ط§ظ„ظ‚طµط©" });
+    res.status(500).json({ msg: "حدث خطأ أثناء إنشاء القصة" });
   }
 });
 
@@ -2290,7 +2295,7 @@ app.post("/api/stories/:id/view", authMiddleware, async (req, res) => {
     const userId = req.userId;
 
     const story = await Story.findById(storyId);
-    if (!story) return res.status(404).json({ msg: "ط§ظ„ظ‚طµط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" });
+    if (!story) return res.status(404).json({ msg: "القصة غير موجودة" });
 
     const already = (story.views || []).some((v) => v.user && v.user.toString() === userId.toString());
     if (!already) {
@@ -2298,10 +2303,10 @@ app.post("/api/stories/:id/view", authMiddleware, async (req, res) => {
       await story.save();
     }
 
-    res.json({ msg: "طھظ… طھط³ط¬ظٹظ„ ط§ظ„ظ…ط´ط§ظ‡ط¯ط©", viewsCount: story.views.length });
+    res.json({ msg: "تم تسجيل المشاهدة", viewsCount: story.views.length });
   } catch (err) {
     console.error("POST /api/stories/:id/view error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، طھط³ط¬ظٹظ„ ط§ظ„ظ…ط´ط§ظ‡ط¯ط©" });
+    res.status(500).json({ msg: "حدث خطأ أثناء تسجيل المشاهدة" });
   }
 });
 
@@ -2311,15 +2316,15 @@ app.get("/api/stories/:id/viewers", authMiddleware, async (req, res) => {
     const userId = req.userId;
 
     const story = await Story.findById(storyId).populate("views.user", "username fullName email avatar");
-    if (!story) return res.status(404).json({ msg: "ط§ظ„ظ‚طµط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" });
+    if (!story) return res.status(404).json({ msg: "القصة غير موجودة" });
 
     if (story.user.toString() !== userId.toString()) {
-      return res.status(403).json({ msg: "ط؛ظٹط± ظ…ط³ظ…ظˆط­ ظ„ظƒ ط¨ط¹ط±ط¶ ظ…ط´ط§ظ‡ط¯ط§طھ ظ‚طµطµ ط§ظ„ط¢ط®ط±ظٹظ†" });
+      return res.status(403).json({ msg: "غير مسموح لك بعرض مشاهدات قصص الآخرين" });
     }
 
     const viewers = (story.views || []).map((v) => ({
       id: v.user?._id,
-      username: v.user?.username || v.user?.email || "ظ…ط³طھط®ط¯ظ… Saepel",
+      username: v.user?.username || v.user?.email || "مستخدم Saepel",
       avatar: v.user?.avatar || "",
       viewedAt: v.at,
     }));
@@ -2327,7 +2332,7 @@ app.get("/api/stories/:id/viewers", authMiddleware, async (req, res) => {
     res.json({ viewers });
   } catch (err) {
     console.error("GET /api/stories/:id/viewers error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¬ظ„ط¨ ط§ظ„ظ…ط´ط§ظ‡ط¯ط§طھ" });
+    res.status(500).json({ msg: "حدث خطأ أثناء جلب المشاهدات" });
   }
 });
 
@@ -2337,17 +2342,17 @@ app.delete("/api/stories/:id", authMiddleware, async (req, res) => {
     const userId = req.userId;
 
     const story = await Story.findById(storyId);
-    if (!story) return res.status(404).json({ msg: "ط§ظ„ظ‚طµط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" });
+    if (!story) return res.status(404).json({ msg: "القصة غير موجودة" });
 
     if (story.user.toString() !== userId.toString()) {
-      return res.status(403).json({ msg: "ط؛ظٹط± ظ…ط³ظ…ظˆط­ ط¨ط­ط°ظپ ظ‚طµط© ط´ط®طµ ط¢ط®ط±" });
+      return res.status(403).json({ msg: "غير مسموح بحذف قصة شخص آخر" });
     }
 
     await story.deleteOne();
-    res.json({ msg: "طھظ… ط­ط°ظپ ط§ظ„ظ‚طµط© ط¨ظ†ط¬ط§ط­" });
+    res.json({ msg: "تم حذف القصة بنجاح" });
   } catch (err) {
     console.error("DELETE /api/stories/:id error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط­ط°ظپ ط§ظ„ظ‚طµط©" });
+    res.status(500).json({ msg: "حدث خطأ أثناء حذف القصة" });
   }
 });
 
@@ -2355,17 +2360,17 @@ app.post("/api/stories/:id/report", authMiddleware, async (req, res) => {
   try {
     const storyId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(storyId)) {
-      return res.status(400).json({ msg: "ظ…ط¹ط±ظ‘ظپ ط§ظ„ظ‚طµط© ط؛ظٹط± طµط§ظ„ط­" });
+      return res.status(400).json({ msg: "معرّف القصة غير صالح" });
     }
 
     const userId = req.userId;
 
     let reason = "";
     if (req.body && typeof req.body.reason === "string") reason = req.body.reason.trim();
-    if (!reason) reason = "ظ…ط­طھظˆظ‰ ط؛ظٹط± ظ„ط§ط¦ظ‚";
+    if (!reason) reason = "محتوى غير لائق";
 
     const story = await Story.findById(storyId);
-    if (!story) return res.status(404).json({ msg: "ط§ظ„ظ‚طµط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" });
+    if (!story) return res.status(404).json({ msg: "القصة غير موجودة" });
 
     const existingReport = await Report.findOne({
       targetType: "story",
@@ -2373,7 +2378,7 @@ app.post("/api/stories/:id/report", authMiddleware, async (req, res) => {
       reporter: userId,
     });
 
-    if (existingReport) return res.json({ msg: "ط³ط¨ظ‚ ظˆظ‚ظ…طھ ط¨ط§ظ„ط¥ط¨ظ„ط§ط؛ ط¹ظ† ظ‡ط°ظ‡ ط§ظ„ظ‚طµط©" });
+    if (existingReport) return res.json({ msg: "سبق وقمت بالإبلاغ عن هذه القصة" });
 
     const rep = await Report.create({
       targetType: "story",
@@ -2385,12 +2390,12 @@ app.post("/api/stories/:id/report", authMiddleware, async (req, res) => {
     });
 
     return res.json({
-      msg: "طھظ… ط¥ط±ط³ط§ظ„ ط§ظ„ط¨ظ„ط§ط؛طŒ ط³ظٹطھظ… ظ…ط±ط§ط¬ط¹طھظ‡ ظ…ظ† ط§ظ„ط¥ط¯ط§ط±ط© âœ…",
+      msg: "تم إرسال البلاغ، سيتم مراجعته من الإدارة ✅",
       reportId: rep._id,
     });
   } catch (err) {
     console.error("POST /api/stories/:id/report error:", err);
-    return res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¥ط±ط³ط§ظ„ ط§ظ„ط¨ظ„ط§ط؛" });
+    return res.status(500).json({ msg: "حدث خطأ أثناء إرسال البلاغ" });
   }
 });
 
@@ -2400,19 +2405,19 @@ app.post("/api/stories/:id/react", authMiddleware, async (req, res) => {
     const userId = req.userId;
     const { emoji } = req.body;
 
-    if (!emoji) return res.status(400).json({ msg: "ط§ظ„ط±ظ…ط² ط§ظ„طھط¹ط¨ظٹط±ظٹ ظ…ط·ظ„ظˆط¨" });
+    if (!emoji) return res.status(400).json({ msg: "الرمز التعبيري مطلوب" });
 
     const story = await Story.findById(storyId);
-    if (!story) return res.status(404).json({ msg: "ط§ظ„ظ‚طµط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" });
+    if (!story) return res.status(404).json({ msg: "القصة غير موجودة" });
 
     if (!Array.isArray(story.reactions)) story.reactions = [];
     story.reactions.push({ user: userId, emoji });
     await story.save();
 
-    res.json({ msg: "طھظ… ط¥ط±ط³ط§ظ„ ط±ط¯ ط§ظ„ظپط¹ظ„", emoji });
+    res.json({ msg: "تم إرسال رد الفعل", emoji });
   } catch (err) {
     console.error("POST /api/stories/:id/react error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¥ط±ط³ط§ظ„ ط±ط¯ ط§ظ„ظپط¹ظ„" });
+    res.status(500).json({ msg: "حدث خطأ أثناء إرسال رد الفعل" });
   }
 });
 
@@ -2422,19 +2427,19 @@ app.post("/api/stories/:id/reply", authMiddleware, async (req, res) => {
     const userId = req.userId;
     const { message } = req.body;
 
-    if (!message || !message.trim()) return res.status(400).json({ msg: "ط§ظ„ط±ط³ط§ظ„ط© ظ…ط·ظ„ظˆط¨ط©" });
+    if (!message || !message.trim()) return res.status(400).json({ msg: "الرسالة مطلوبة" });
 
     const story = await Story.findById(storyId);
-    if (!story) return res.status(404).json({ msg: "ط§ظ„ظ‚طµط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" });
+    if (!story) return res.status(404).json({ msg: "القصة غير موجودة" });
 
     if (!Array.isArray(story.replies)) story.replies = [];
     story.replies.push({ user: userId, message: message.trim() });
     await story.save();
 
-    res.json({ msg: "طھظ… ط¥ط±ط³ط§ظ„ ط§ظ„ط±ط¯ ط¨ظ†ط¬ط§ط­" });
+    res.json({ msg: "تم إرسال الرد بنجاح" });
   } catch (err) {
     console.error("POST /api/stories/:id/reply error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¥ط±ط³ط§ظ„ ط§ظ„ط±ط¯" });
+    res.status(500).json({ msg: "حدث خطأ أثناء إرسال الرد" });
   }
 });
 
@@ -2494,32 +2499,32 @@ app.get("/api/calls/logs", authMiddleware, async (req, res) => {
     return res.json(out);
   } catch (e) {
     console.error("GET /api/calls/logs error:", e);
-    return res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¬ظ„ط¨ ط³ط¬ظ„ ط§ظ„ط§طھطµط§ظ„ط§طھ" });
+    return res.status(500).json({ msg: "حدث خطأ أثناء جلب سجل الاتصالات" });
   }
 });
 
-// âœ… ط­ط°ظپ ط³ط¬ظ„ ط§طھطµط§ظ„ ظˆط§ط­ط¯ "ط¹ظ†ط¯ظٹ" ظپظ‚ط·
+// âœ… ط­ط°ظپ ط³ط¬ظ„ ط§طھطµط§ظ„ ظˆط§ط­ط¯ "عندي" ظپظ‚ط·
 app.post("/api/calls/logs/:id/delete-for-me", authMiddleware, async (req, res) => {
   try {
     const userId = String(req.userId || "");
     const id = String(req.params.id || "");
-    if (!mongoose.Types.ObjectId.isValid(String(id || ""))) return res.status(400).json({ msg: "ظ…ط¹ط±ظ‘ظپ ط؛ظٹط± طµط§ظ„ط­" });
+    if (!mongoose.Types.ObjectId.isValid(String(id || ""))) return res.status(400).json({ msg: "معرّف غير صالح" });
 
     const log = await CallLog.findById(id).select("_id participants");
     if (!log) return res.json({ ok: true });
 
     const isMember = Array.isArray(log.participants) && log.participants.some((p) => String(p) === userId);
-    if (!isMember) return res.status(403).json({ msg: "ط؛ظٹط± ظ…ط³ظ…ظˆط­" });
+    if (!isMember) return res.status(403).json({ msg: "غير مسموح" });
 
     await CallLog.updateOne({ _id: id }, { $addToSet: { deletedFor: userId } });
     return res.json({ ok: true });
   } catch (e) {
     console.error("POST /api/calls/logs/:id/delete-for-me error:", e);
-    return res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط­ط°ظپ ط§ظ„ط³ط¬ظ„" });
+    return res.status(500).json({ msg: "حدث خطأ أثناء حذف السجل" });
   }
 });
 
-// âœ… ظ…ط³ط­ ظƒظ„ ط§ظ„ط³ط¬ظ„ "ط¹ظ†ط¯ظٹ" ظپظ‚ط·
+// âœ… ظ…ط³ط­ ظƒظ„ ط§ظ„ط³ط¬ظ„ "عندي" ظپظ‚ط·
 app.post("/api/calls/logs/clear-for-me", authMiddleware, async (req, res) => {
   try {
     const userId = String(req.userId || "");
@@ -2527,7 +2532,7 @@ app.post("/api/calls/logs/clear-for-me", authMiddleware, async (req, res) => {
     return res.json({ ok: true });
   } catch (e) {
     console.error("POST /api/calls/logs/clear-for-me error:", e);
-    return res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ظ…ط³ط­ ط§ظ„ط³ط¬ظ„" });
+    return res.status(500).json({ msg: "حدث خطأ أثناء مسح السجل" });
   }
 });
 
@@ -2562,7 +2567,7 @@ app.get("/api/chat/conversations", authMiddleware, async (req, res) => {
     res.json(conversations);
   } catch (err) {
     console.error("GET /api/chat/conversations error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¬ظ„ط¨ ط§ظ„ظ…ط­ط§ط¯ط«ط§طھ" });
+    res.status(500).json({ msg: "حدث خطأ أثناء جلب المحادثات" });
   }
 });
 
@@ -2571,13 +2576,13 @@ app.post("/api/chat/conversations/start", authMiddleware, async (req, res) => {
     const userId = req.userId;
     const { otherUserId } = req.body;
 
-    if (!otherUserId) return res.status(400).json({ msg: "otherUserId ظ…ط·ظ„ظˆط¨" });
+    if (!otherUserId) return res.status(400).json({ msg: "otherUserId مطلوب" });
     if (String(otherUserId) === String(userId)) {
-      return res.status(400).json({ msg: "ظ„ط§ ظٹظ…ظƒظ†ظƒ ط¨ط¯ط، ظ…ط­ط§ط¯ط«ط© ظ…ط¹ ظ†ظپط³ظƒ ط­ط§ظ„ظٹط§ظ‹" });
+      return res.status(400).json({ msg: "لا يمكنك بدء محادثة مع نفسك حالياً" });
     }
 
     const otherUser = await User.findById(otherUserId).select("username fullName avatar");
-    if (!otherUser) return res.status(404).json({ msg: "ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!otherUser) return res.status(404).json({ msg: "المستخدم غير موجود" });
 
     let conversation = await Conversation.findOne({
       isGroup: false,
@@ -2608,7 +2613,7 @@ app.post("/api/chat/conversations/start", authMiddleware, async (req, res) => {
     res.json(conversation);
   } catch (err) {
     console.error("POST /api/chat/conversations/start error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¥ظ†ط´ط§ط، ط§ظ„ظ…ط­ط§ط¯ط«ط©" });
+    res.status(500).json({ msg: "حدث خطأ أثناء إنشاء المحادثة" });
   }
 });
 
@@ -2638,7 +2643,7 @@ app.get("/api/chat/spaces", authMiddleware, async (req, res) => {
     return res.json(spaces);
   } catch (err) {
     console.error("GET /api/chat/spaces error:", err);
-    return res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¬ظ„ط¨ ط§ظ„ظ‚ظ†ظˆط§طھ/ط§ظ„ظ…ط¬ظ…ظˆط¹ط§طھ" });
+    return res.status(500).json({ msg: "حدث خطأ أثناء جلب القنوات/المجموعات" });
   }
 });
 
@@ -2665,13 +2670,13 @@ app.post("/api/chat/spaces", authMiddleware, async (req, res) => {
     const permissions = req.body?.permissions && typeof req.body.permissions === "object" ? req.body.permissions : {};
 
     if (!["group", "channel"].includes(type)) {
-      return res.status(400).json({ msg: "type ط؛ظٹط± طµط§ظ„ط­" });
+      return res.status(400).json({ msg: "type غير صالح" });
     }
     if (title.length < 2) {
-      return res.status(400).json({ msg: "ط§ط³ظ… ط§ظ„ظ…ط¬ظ…ظˆط¹ط©/ط§ظ„ظ‚ظ†ط§ط© ظ‚طµظٹط± ط¬ط¯ط§ظ‹" });
+      return res.status(400).json({ msg: "اسم المجموعة/القناة قصير جداً" });
     }
     if (!["public", "private"].includes(visibility)) {
-      return res.status(400).json({ msg: "visibility ط؛ظٹط± طµط§ظ„ط­ط©" });
+      return res.status(400).json({ msg: "visibility غير صالحة" });
     }
 
     // Normalize members: include owner always
@@ -2687,10 +2692,10 @@ app.post("/api/chat/spaces", authMiddleware, async (req, res) => {
     // Public username must be unique (best-effort)
     if (visibility === "public") {
       if (!username || username.length < 3) {
-        return res.status(400).json({ msg: "username ظ…ط·ظ„ظˆط¨ ظ„ظ„ظ‚ظ†ظˆط§طھ/ط§ظ„ظ…ط¬ظ…ظˆط¹ط§طھ ط§ظ„ط¹ط§ظ…ط©" });
+        return res.status(400).json({ msg: "username مطلوب للقنوات/المجموعات العامة" });
       }
       const taken = await Conversation.findOne({ username: username }).select("_id").lean();
-      if (taken) return res.status(409).json({ msg: "ظ‡ط°ط§ ط§ظ„ظ€ username ظ…ط³طھط®ط¯ظ… ط¨ط§ظ„ظپط¹ظ„" });
+      if (taken) return res.status(409).json({ msg: "هذا الـ username مستخدم بالفعل" });
     }
 
     // Invite code for private spaces
@@ -2731,7 +2736,7 @@ app.post("/api/chat/spaces", authMiddleware, async (req, res) => {
     return res.json({ ok: true, conversation: conv });
   } catch (e) {
     console.error("POST /api/chat/spaces error:", e);
-    return res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¥ظ†ط´ط§ط، ط§ظ„ظ…ط¬ظ…ظˆط¹ط©/ط§ظ„ظ‚ظ†ط§ط©" });
+    return res.status(500).json({ msg: "حدث خطأ أثناء إنشاء المجموعة/القناة" });
   }
 });
 
@@ -2762,10 +2767,10 @@ app.get("/api/chat/conversations/:id/messages", authMiddleware, async (req, res)
     }
 
     const conversation = await Conversation.findById(conversationId);
-    if (!conversation) return res.status(404).json({ msg: "ط§ظ„ظ…ط­ط§ط¯ط«ط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" });
+    if (!conversation) return res.status(404).json({ msg: "المحادثة غير موجودة" });
 
     if (!conversation.participants.some((p) => String(p) === String(userId))) {
-      return res.status(403).json({ msg: "ظ„ط§ طھظ…ظ„ظƒ طµظ„ط§ط­ظٹط© ط¹ظ„ظ‰ ظ‡ط°ظ‡ ط§ظ„ظ…ط­ط§ط¯ط«ط©" });
+      return res.status(403).json({ msg: "لا تملك صلاحية على هذه المحادثة" });
     }
 
     const q = {
@@ -2795,7 +2800,7 @@ app.get("/api/chat/conversations/:id/messages", authMiddleware, async (req, res)
     return res.json({ items, hasMore, nextCursor });
   } catch (err) {
     console.error("GET /api/chat/conversations/:id/messages error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¬ظ„ط¨ ط§ظ„ط±ط³ط§ط¦ظ„" });
+    res.status(500).json({ msg: "حدث خطأ أثناء جلب الرسائل" });
   }
 });
 
@@ -2808,17 +2813,17 @@ app.post("/api/chat/conversations/:id/clear", authMiddleware, async (req, res) =
     const conversationId = String(req.params.id || "");
 
     if (!mongoose.Types.ObjectId.isValid(conversationId)) {
-      return res.status(400).json({ msg: "conversationId ط؛ظٹط± طµط§ظ„ط­" });
+      return res.status(400).json({ msg: "conversationId غير صالح" });
     }
 
     const conversation = await Conversation.findById(conversationId).select("_id participants type owner admins isGroup");
-    if (!conversation) return res.status(404).json({ msg: "ط§ظ„ظ…ط­ط§ط¯ط«ط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" });
+    if (!conversation) return res.status(404).json({ msg: "المحادثة غير موجودة" });
 
     const isMember = Array.isArray(conversation.participants) && conversation.participants.some((p) => String(p) === userId);
-    if (!isMember) return res.status(403).json({ msg: "ظ„ط§ طھظ…ظ„ظƒ طµظ„ط§ط­ظٹط© ط¹ظ„ظ‰ ظ‡ط°ظ‡ ط§ظ„ظ…ط­ط§ط¯ط«ط©" });
+    if (!isMember) return res.status(403).json({ msg: "لا تملك صلاحية على هذه المحادثة" });
 
     if (isChannel(conversation) && !isConvAdmin(conversation, userId)) {
-      return res.status(403).json({ msg: "ظ„ط§ ظٹظ…ظƒظ†ظƒ ظ…ط³ط­ ظ‚ظ†ط§ط© ط¥ظ„ط§ ط¥ط°ط§ ظƒظ†طھ ظ…ط´ط±ظپط§ظ‹" });
+      return res.status(403).json({ msg: "لا يمكنك مسح قناة إلا إذا كنت مشرفاً" });
     }
 
     // âœ… ظ…ط³ط­ ظƒظ„ ط§ظ„ط±ط³ط§ط¦ظ„ ط¹ظ†ط¯ظٹ ظپظ‚ط·
@@ -2831,7 +2836,7 @@ app.post("/api/chat/conversations/:id/clear", authMiddleware, async (req, res) =
     return res.json({ ok: true, modified: result?.modifiedCount || result?.nModified || 0 });
   } catch (e) {
     console.error("POST /api/chat/conversations/:id/clear error:", e);
-    return res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ظ…ط³ط­ ط§ظ„ظ…ط­ط§ط¯ط«ط©" });
+    return res.status(500).json({ msg: "حدث خطأ أثناء مسح المحادثة" });
   }
 });
 
@@ -2853,10 +2858,10 @@ app.post(
       const text = rawText.trim();
 
       const conversation = await Conversation.findById(conversationId);
-      if (!conversation) return res.status(404).json({ msg: "ط§ظ„ظ…ط­ط§ط¯ط«ط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" });
+      if (!conversation) return res.status(404).json({ msg: "المحادثة غير موجودة" });
 
       if (!conversation.participants.some((p) => String(p) === String(userId))) {
-        return res.status(403).json({ msg: "ظ„ط§ طھظ…ظ„ظƒ طµظ„ط§ط­ظٹط© ط¹ظ„ظ‰ ظ‡ط°ظ‡ ط§ظ„ظ…ط­ط§ط¯ط«ط©" });
+        return res.status(403).json({ msg: "لا تملك صلاحية على هذه المحادثة" });
       }
 
       const files = [];
@@ -2879,20 +2884,14 @@ app.post(
             ? req.body.attachments
             : [];
 
-      const detectKind = (mime) => {
-        if (!mime) return "file";
-        if (mime.startsWith("image/")) return "image";
-        if (mime.startsWith("video/")) return "video";
-        if (mime.startsWith("audio/")) return "audio";
-        return "file";
-      };
+      const detectKind = (mime, name = "") => detectKindFromMime(mime, name);
 
       // ط¯ط¹ظ… ظ…ط¯ط© ط§ظ„ط±ط³ط§ظ„ط© ط§ظ„طµظˆطھظٹط© (ط«ظˆط§ظ†ظٹ) ط¥ط°ط§ ط£ط±ط³ظ„ظ‡ط§ ط§ظ„ظپط±ظˆظ†طھ
       const voiceDurationRaw = req.body?.voiceDuration ?? req.body?.duration ?? 0;
       const voiceDuration = Number.isFinite(Number(voiceDurationRaw)) ? Number(voiceDurationRaw) : 0;
 
       const fileAttachments = files.map((f) => {
-        const kind = detectKind(f.mimetype);
+        const kind = detectKind(f.mimetype, f.originalname || f.filename);
         const att = {
           url: buildUploadsUrlFromMulterFile(f),
           type: kind,
@@ -2951,7 +2950,7 @@ app.post(
       const hasReply = !!replyTo && (hasText || hasFiles);
 
       if (!hasText && !hasFiles && !hasForward && !hasReply) {
-        return res.status(400).json({ msg: "ظٹط¬ط¨ ط¥ط±ط³ط§ظ„ ظ†طµ ط£ظˆ ظ…ط±ظپظ‚ ظˆط§ط­ط¯ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„" });
+        return res.status(400).json({ msg: "يجب إرسال نص أو مرفق واحد على الأقل" });
       }
 
       // âœ… ظ†ظˆط¹ ط§ظ„ط±ط³ط§ظ„ط© ط¨ط´ظƒظ„ ظ…ظˆط­ظ‘ط¯ ظˆط¢ظ…ظ†
@@ -3008,10 +3007,120 @@ app.post(
       res.status(201).json(populatedMsg);
     } catch (err) {
       console.error("POST /api/chat/conversations/:id/messages error:", err);
-      res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¥ط±ط³ط§ظ„ ط§ظ„ط±ط³ط§ظ„ط©" });
+      res.status(500).json({ msg: "حدث خطأ أثناء إرسال الرسالة" });
     }
   }
 );
+
+// ✅ Edit message text (sender only)
+app.put("/api/chat/messages/:id", authMiddleware, async (req, res) => {
+  try {
+    const userId = String(req.userId || "");
+    const messageId = String(req.params.id || "");
+    const nextText = typeof req.body?.text === "string" ? req.body.text.trim() : "";
+
+    if (!mongoose.Types.ObjectId.isValid(messageId)) {
+      return res.status(400).json({ msg: "messageId غير صالح" });
+    }
+    if (!nextText) {
+      return res.status(400).json({ msg: "النص مطلوب للتعديل" });
+    }
+
+    const msg = await Message.findById(messageId).select(
+      "_id conversation sender attachments deletedForAll"
+    );
+    if (!msg) return res.status(404).json({ msg: "الرسالة غير موجودة" });
+    if (msg.deletedForAll) return res.status(400).json({ msg: "لا يمكن تعديل هذه الرسالة" });
+    if (String(msg.sender) !== userId) {
+      return res.status(403).json({ msg: "لا يمكنك تعديل رسالة لا تخصك" });
+    }
+
+    const conv = await Conversation.findById(msg.conversation).select("_id participants");
+    if (!conv) return res.status(404).json({ msg: "المحادثة غير موجودة" });
+    const isMember = Array.isArray(conv.participants) && conv.participants.some((p) => String(p) === userId);
+    if (!isMember) {
+      return res.status(403).json({ msg: "لا تملك صلاحية على هذه المحادثة" });
+    }
+
+    msg.text = nextText;
+    msg.type = computeMessageType(nextText, Array.isArray(msg.attachments) ? msg.attachments : []);
+    msg.editedAt = new Date();
+    msg.editedBy = userId;
+    await msg.save();
+
+    const populatedMsg = await msg.populate("sender", "username fullName avatar");
+    const payload = populatedMsg.toObject();
+    payload.conversation = String(msg.conversation);
+
+    for (const p of conv.participants || []) {
+      io.to(`user-${String(p)}`).emit("message-updated", payload);
+    }
+
+    return res.json(payload);
+  } catch (e) {
+    console.error("PUT /api/chat/messages/:id error:", e);
+    return res.status(500).json({ msg: "حدث خطأ أثناء تعديل الرسالة" });
+  }
+});
+
+// ✅ Add / update / remove reaction
+app.post("/api/chat/messages/:id/react", authMiddleware, async (req, res) => {
+  try {
+    const userId = String(req.userId || "");
+    const messageId = String(req.params.id || "");
+    const emoji = typeof req.body?.emoji === "string" ? req.body.emoji.trim() : "";
+
+    if (!mongoose.Types.ObjectId.isValid(messageId)) {
+      return res.status(400).json({ msg: "messageId غير صالح" });
+    }
+
+    const msg = await Message.findById(messageId).select(
+      "_id conversation deletedForAll reactions"
+    );
+    if (!msg) return res.status(404).json({ msg: "الرسالة غير موجودة" });
+    if (msg.deletedForAll) return res.status(400).json({ msg: "لا يمكن التفاعل مع هذه الرسالة" });
+
+    const conv = await Conversation.findById(msg.conversation).select("_id participants");
+    if (!conv) return res.status(404).json({ msg: "المحادثة غير موجودة" });
+    const isMember = Array.isArray(conv.participants) && conv.participants.some((p) => String(p) === userId);
+    if (!isMember) {
+      return res.status(403).json({ msg: "لا تملك صلاحية على هذه المحادثة" });
+    }
+
+    const next = Array.isArray(msg.reactions) ? [...msg.reactions] : [];
+    const idx = next.findIndex((r) => String(r?.user || "") === userId);
+    if (!emoji) {
+      if (idx >= 0) next.splice(idx, 1);
+    } else if (idx >= 0) {
+      next[idx].emoji = emoji;
+      next[idx].at = new Date();
+    } else {
+      next.push({ user: userId, emoji, at: new Date() });
+    }
+
+    msg.reactions = next;
+    await msg.save();
+
+    const reactionPayload = {
+      conversationId: String(msg.conversation),
+      messageId: String(msg._id),
+      reactions: (msg.reactions || []).map((r) => ({
+        user: String(r.user || ""),
+        emoji: String(r.emoji || ""),
+        at: r.at || null,
+      })),
+    };
+
+    for (const p of conv.participants || []) {
+      io.to(`user-${String(p)}`).emit("message-reaction", reactionPayload);
+    }
+
+    return res.json({ ok: true, ...reactionPayload });
+  } catch (e) {
+    console.error("POST /api/chat/messages/:id/react error:", e);
+    return res.status(500).json({ msg: "حدث خطأ أثناء التفاعل" });
+  }
+});
 
 
 /* ===================================================================== */
@@ -3071,7 +3180,7 @@ app.post("/api/chat/messages/delete-for-me", authMiddleware, async (req, res) =>
       if (!isMember) continue;
       // âœ… ظ‚ظ†ظˆط§طھ: ط؛ظٹط± ط§ظ„ظ…ط´ط±ظپ ظ„ط§ ظٹط­ظ‚ ظ„ظ‡ ط­ط°ظپ ط­طھظ‰ ط¹ظ†ط¯ظ‡ ظپظ‚ط· (Telegram-like)
       if (isChannel(c) && !isConvAdmin(c, userId)) {
-        return res.status(403).json({ msg: "ظ„ط§ ظٹظ…ظƒظ†ظƒ ط­ط°ظپ ط±ط³ط§ط¦ظ„ ط¯ط§ط®ظ„ ظ‚ظ†ط§ط© ط¥ظ„ط§ ط¥ط°ط§ ظƒظ†طھ ظ…ط´ط±ظپط§ظ‹" });
+        return res.status(403).json({ msg: "لا يمكنك حذف رسائل داخل قناة إلا إذا كنت مشرفاً" });
       }
       allowedIds.push(String(m._id));
     }
@@ -3091,7 +3200,7 @@ app.post("/api/chat/messages/delete-for-me", authMiddleware, async (req, res) =>
     return res.json({ ok: true, deleted: allowedIds.length });
   } catch (e) {
     console.error("POST /api/chat/messages/delete-for-me error:", e);
-    return res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط§ظ„ط­ط°ظپ" });
+    return res.status(500).json({ msg: "حدث خطأ أثناء الحذف" });
   }
 });
 
@@ -3103,21 +3212,21 @@ app.post("/api/chat/messages/:id/delete-for-me", authMiddleware, async (req, res
     const messageId = req.params.id;
 
     if (!mongoose.Types.ObjectId.isValid(messageId)) {
-      return res.status(400).json({ msg: "messageId ط؛ظٹط± طµط§ظ„ط­" });
+      return res.status(400).json({ msg: "messageId غير صالح" });
     }
 
     const msg = await Message.findById(messageId).select("conversation");
-    if (!msg) return res.status(404).json({ msg: "ط§ظ„ط±ط³ط§ظ„ط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" });
+    if (!msg) return res.status(404).json({ msg: "الرسالة غير موجودة" });
 
     const conv = await Conversation.findById(msg.conversation).select("participants isGroup type owner admins");
-    if (!conv) return res.status(404).json({ msg: "ط§ظ„ظ…ط­ط§ط¯ط«ط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" });
+    if (!conv) return res.status(404).json({ msg: "المحادثة غير موجودة" });
 
     if (!conv.participants.some((p) => String(p) === String(userId))) {
-      return res.status(403).json({ msg: "ظ„ط§ طھظ…ظ„ظƒ طµظ„ط§ط­ظٹط© ط¹ظ„ظ‰ ظ‡ط°ظ‡ ط§ظ„ظ…ط­ط§ط¯ط«ط©" });
+      return res.status(403).json({ msg: "لا تملك صلاحية على هذه المحادثة" });
     }
 
     if (isChannel(conv) && !isConvAdmin(conv, userId)) {
-      return res.status(403).json({ msg: "ظ„ط§ ظٹظ…ظƒظ†ظƒ ط­ط°ظپ ط±ط³ط§ط¦ظ„ ط¯ط§ط®ظ„ ظ‚ظ†ط§ط© ط¥ظ„ط§ ط¥ط°ط§ ظƒظ†طھ ظ…ط´ط±ظپط§ظ‹" });
+      return res.status(403).json({ msg: "لا يمكنك حذف رسائل داخل قناة إلا إذا كنت مشرفاً" });
     }
 
     await Message.updateOne({ _id: messageId }, { $addToSet: { deletedFor: userId } });
@@ -3135,7 +3244,7 @@ app.post("/api/chat/messages/:id/delete-for-me", authMiddleware, async (req, res
     return res.json({ ok: true });
   } catch (e) {
     console.error("POST /api/chat/messages/:id/delete-for-me error:", e);
-    return res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط§ظ„ط­ط°ظپ" });
+    return res.status(500).json({ msg: "حدث خطأ أثناء الحذف" });
   }
 });
 
@@ -3146,22 +3255,22 @@ app.delete("/api/chat/messages/:id", authMiddleware, async (req, res) => {
 
     // ظ„ط§ طھط±ظ…ظٹ 500 ظ„ظˆ temp-... ط£ظˆ ط؛ظٹط± طµط§ظ„ط­
     if (!isValidObjectId(messageId)) {
-      return res.status(400).json({ msg: "ظ…ط¹ط±ظ‘ظپ ط§ظ„ط±ط³ط§ظ„ط© ط؛ظٹط± طµط§ظ„ط­" });
+      return res.status(400).json({ msg: "معرّف الرسالة غير صالح" });
     }
 
     const msg = await Message.findById(messageId).lean();
-    if (!msg) return res.status(404).json({ msg: "ط§ظ„ط±ط³ط§ظ„ط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" });
+    if (!msg) return res.status(404).json({ msg: "الرسالة غير موجودة" });
 
     const conv = await Conversation.findById(msg.conversation).select("participants isGroup type owner admins");
-    if (!conv) return res.status(404).json({ msg: "ط§ظ„ظ…ط­ط§ط¯ط«ط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" });
+    if (!conv) return res.status(404).json({ msg: "المحادثة غير موجودة" });
 
     if (!Array.isArray(conv.participants) || !conv.participants.some((p) => String(p) === userId)) {
-      return res.status(403).json({ msg: "ظ„ط§ طھظ…ظ„ظƒ طµظ„ط§ط­ظٹط© ط¹ظ„ظ‰ ظ‡ط°ظ‡ ط§ظ„ظ…ط­ط§ط¯ط«ط©" });
+      return res.status(403).json({ msg: "لا تملك صلاحية على هذه المحادثة" });
     }
 
     // طµظ„ط§ط­ظٹط©: ظپظ‚ط· ط§ظ„ظ…ط±ط³ظ„ ظٹط­ط°ظپ ظ„ظ„ط¬ظ…ظٹط¹ (ط£ظˆ طھظˆط³ظ‘ط¹ظ‡ط§ ظ„ط§ط­ظ‚ط§ظ‹ ظ„ظ„ظ…ط´ط±ظپ/ظ…ط§ظ„ظƒ ط§ظ„ظ…ط¬ظ…ظˆط¹ط©)
     if (String(msg.sender) !== userId) {
-      return res.status(403).json({ msg: "ظپظ‚ط· ظ…ظڈط±ط³ظ„ ط§ظ„ط±ط³ط§ظ„ط© ظٹط³طھط·ظٹط¹ ط­ط°ظپظ‡ط§ ظ„ظ„ط¬ظ…ظٹط¹" });
+      return res.status(403).json({ msg: "فقط مُرسل الرسالة يستطيع حذفها للجميع" });
     }
 
     // ط­ط°ظپ ظ…ظ„ظپط§طھ ط§ظ„ظ…ط±ظپظ‚ط§طھ ظ…ظ† uploads ط¥ظ† ظˆط¬ط¯طھ
@@ -3196,7 +3305,7 @@ app.delete("/api/chat/messages/:id", authMiddleware, async (req, res) => {
     return res.json({ ok: true });
   } catch (e) {
     console.error("DELETE /api/chat/messages/:id error:", e);
-    return res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط§ظ„ط­ط°ظپ" });
+    return res.status(500).json({ msg: "حدث خطأ أثناء الحذف" });
   }
 });
 
@@ -3226,7 +3335,7 @@ app.post("/api/chat/messages/bulk-delete", authMiddleware, async (req, res) => {
 
       if (isChannel(c)) {
         if (!isConvAdmin(c, userId)) {
-          return res.status(403).json({ msg: "ظ„ط§ ظٹظ…ظƒظ†ظƒ ط­ط°ظپ ط±ط³ط§ط¦ظ„ ط¯ط§ط®ظ„ ظ‚ظ†ط§ط© ط¥ظ„ط§ ط¥ط°ط§ ظƒظ†طھ ظ…ط´ط±ظپط§ظ‹" });
+          return res.status(403).json({ msg: "لا يمكنك حذف رسائل داخل قناة إلا إذا كنت مشرفاً" });
         }
         // admin: allow delete any message in channel
         deletable.push(m);
@@ -3283,7 +3392,7 @@ app.post("/api/chat/messages/bulk-delete", authMiddleware, async (req, res) => {
     return res.json({ ok: true, deleted: deletableIds.length });
   } catch (e) {
     console.error("POST /api/chat/messages/bulk-delete error:", e);
-    return res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط§ظ„ط­ط°ظپ" });
+    return res.status(500).json({ msg: "حدث خطأ أثناء الحذف" });
   }
 });
 app.post("/api/chat/conversations/:id/seen", authMiddleware, async (req, res) => {
@@ -3292,10 +3401,10 @@ app.post("/api/chat/conversations/:id/seen", authMiddleware, async (req, res) =>
     const conversationId = req.params.id;
 
     const conversation = await Conversation.findById(conversationId);
-    if (!conversation) return res.status(404).json({ msg: "ط§ظ„ظ…ط­ط§ط¯ط«ط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" });
+    if (!conversation) return res.status(404).json({ msg: "المحادثة غير موجودة" });
 
     if (!conversation.participants.some((p) => String(p) === String(userId))) {
-      return res.status(403).json({ msg: "ظ„ط§ طھظ…ظ„ظƒ طµظ„ط§ط­ظٹط© ط¹ظ„ظ‰ ظ‡ط°ظ‡ ط§ظ„ظ…ط­ط§ط¯ط«ط©" });
+      return res.status(403).json({ msg: "لا تملك صلاحية على هذه المحادثة" });
     }
 
     await Message.updateMany(
@@ -3323,10 +3432,10 @@ app.post("/api/chat/conversations/:id/seen", authMiddleware, async (req, res) =>
       console.error("emit messages-seen error:", e);
     }
 
-    res.json({ msg: "طھظ… طھط­ط¯ظٹط« ط­ط§ظ„ط© ط§ظ„ظ‚ط±ط§ط،ط©" });
+    res.json({ msg: "تم تحديث حالة القراءة" });
   } catch (err) {
     console.error("POST /api/chat/conversations/:id/seen error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، طھط­ط¯ظٹط« ط­ط§ظ„ط© ط§ظ„ظ‚ط±ط§ط،ط©" });
+    res.status(500).json({ msg: "حدث خطأ أثناء تحديث حالة القراءة" });
   }
 });
 
@@ -3341,23 +3450,23 @@ app.post("/api/reports", authMiddleware, async (req, res) => {
     const { type, targetId, reason, details } = req.body || {};
 
     if (!type || !targetId) {
-      return res.status(400).json({ msg: "ط¨ظٹط§ظ†ط§طھ ط§ظ„ط¨ظ„ط§ط؛ ط؛ظٹط± ظƒط§ظ…ظ„ط© (ط§ظ„ظ†ظˆط¹ ط£ظˆ ط§ظ„ظ…ط¹ط±ظ‘ظپ ظ…ظپظ‚ظˆط¯)" });
+      return res.status(400).json({ msg: "بيانات البلاغ غير كاملة (النوع أو المعرّف مفقود)" });
     }
 
     let finalReason = (reason || "").trim();
     const finalDetails = (details || "").trim();
-    if (!finalReason) finalReason = "ط³ط¨ط¨ ط؛ظٹط± ظ…ط­ط¯ط¯";
+    if (!finalReason) finalReason = "سبب غير محدد";
 
     if (type === "post") {
-      if (!mongoose.Types.ObjectId.isValid(targetId)) return res.status(400).json({ msg: "ظ…ط¹ط±ظ‘ظپ ط§ظ„ظ…ظ†ط´ظˆط± ط؛ظٹط± طµط§ظ„ط­" });
+      if (!mongoose.Types.ObjectId.isValid(targetId)) return res.status(400).json({ msg: "معرّف المنشور غير صالح" });
 
       const post = await Post.findById(targetId);
-      if (!post) return res.status(404).json({ msg: "ط§ظ„ظ…ظ†ط´ظˆط± ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+      if (!post) return res.status(404).json({ msg: "المنشور غير موجود" });
 
       const existing = await Report.findOne({ targetType: "post", post: post._id, reporter: userId });
-      if (existing) return res.json({ msg: "ط³ط¨ظ‚ ظˆظ‚ظ…طھ ط¨ط§ظ„ط¥ط¨ظ„ط§ط؛ ط¹ظ† ظ‡ط°ط§ ط§ظ„ظ…ظ†ط´ظˆط±" });
+      if (existing) return res.json({ msg: "سبق وقمت بالإبلاغ عن هذا المنشور" });
 
-      const finalReasonForPost = finalReason === "other" ? "ط³ط¨ط¨ ط¢ط®ط±" : finalReason;
+      const finalReasonForPost = finalReason === "other" ? "سبب آخر" : finalReason;
 
       if (!Array.isArray(post.reports)) post.reports = [];
       post.reports.push({ user: userId, reason: finalReasonForPost, other: finalDetails, createdAt: new Date() });
@@ -3372,17 +3481,17 @@ app.post("/api/reports", authMiddleware, async (req, res) => {
         status: "pending",
       });
 
-      return res.json({ msg: "طھظ… ط¥ط±ط³ط§ظ„ ط§ظ„ط¨ظ„ط§ط؛ ط¹ظ„ظ‰ ط§ظ„ظ…ظ†ط´ظˆط±طŒ ط³ظٹطھظ… ظ…ط±ط§ط¬ط¹طھظ‡ ظ…ظ† ط§ظ„ط¥ط¯ط§ط±ط© âœ…", reportId: rep._id });
+      return res.json({ msg: "تم إرسال البلاغ على المنشور، سيتم مراجعته من الإدارة ✅", reportId: rep._id });
     }
 
     if (type === "story") {
-      if (!mongoose.Types.ObjectId.isValid(targetId)) return res.status(400).json({ msg: "ظ…ط¹ط±ظ‘ظپ ط§ظ„ظ‚طµط© ط؛ظٹط± طµط§ظ„ط­" });
+      if (!mongoose.Types.ObjectId.isValid(targetId)) return res.status(400).json({ msg: "معرّف القصة غير صالح" });
 
       const story = await Story.findById(targetId);
-      if (!story) return res.status(404).json({ msg: "ط§ظ„ظ‚طµط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" });
+      if (!story) return res.status(404).json({ msg: "القصة غير موجودة" });
 
       const existing = await Report.findOne({ targetType: "story", story: story._id, reporter: userId });
-      if (existing) return res.json({ msg: "ط³ط¨ظ‚ ظˆظ‚ظ…طھ ط¨ط§ظ„ط¥ط¨ظ„ط§ط؛ ط¹ظ† ظ‡ط°ظ‡ ط§ظ„ظ‚طµط©" });
+      if (existing) return res.json({ msg: "سبق وقمت بالإبلاغ عن هذه القصة" });
 
       const rep = await Report.create({
         targetType: "story",
@@ -3393,13 +3502,13 @@ app.post("/api/reports", authMiddleware, async (req, res) => {
         status: "pending",
       });
 
-      return res.json({ msg: "طھظ… ط¥ط±ط³ط§ظ„ ط§ظ„ط¨ظ„ط§ط؛ ط¹ظ„ظ‰ ط§ظ„ظ‚طµط©طŒ ط³ظٹطھظ… ظ…ط±ط§ط¬ط¹طھظ‡ ظ…ظ† ط§ظ„ط¥ط¯ط§ط±ط© âœ…", reportId: rep._id });
+      return res.json({ msg: "تم إرسال البلاغ على القصة، سيتم مراجعته من الإدارة ✅", reportId: rep._id });
     }
 
-    return res.status(400).json({ msg: "ظ†ظˆط¹ ط§ظ„ط¨ظ„ط§ط؛ ط؛ظٹط± ظ…ط¯ط¹ظˆظ… (post ط£ظˆ story ظپظ‚ط·)" });
+    return res.status(400).json({ msg: "نوع البلاغ غير مدعوم (post أو story فقط)" });
   } catch (err) {
     console.error("POST /api/reports error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¥ط±ط³ط§ظ„ ط§ظ„ط¨ظ„ط§ط؛طŒ ط­ط§ظˆظ„ ظ…ط±ط© ط£ط®ط±ظ‰" });
+    res.status(500).json({ msg: "حدث خطأ أثناء إرسال البلاغ، حاول مرة أخرى" });
   }
 });
 
@@ -3409,21 +3518,21 @@ app.post("/api/posts/report/:id", authMiddleware, async (req, res) => {
     const userId = req.userId;
     const { reason, other } = req.body || {};
 
-    if (!reason && !other) return res.status(400).json({ msg: "ظٹط¬ط¨ طھط­ط¯ظٹط¯ ط³ط¨ط¨ ظ„ظ„ط¥ط¨ظ„ط§ط؛" });
+    if (!reason && !other) return res.status(400).json({ msg: "يجب تحديد سبب للإبلاغ" });
 
     let post;
     try {
       post = await Post.findById(postId);
     } catch {
-      return res.status(400).json({ msg: "ظ…ط¹ط±ظ‘ظپ ط§ظ„ظ…ظ†ط´ظˆط± ط؛ظٹط± طµط§ظ„ط­" });
+      return res.status(400).json({ msg: "معرّف المنشور غير صالح" });
     }
 
-    if (!post) return res.status(404).json({ msg: "ط§ظ„ظ…ظ†ط´ظˆط± ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!post) return res.status(404).json({ msg: "المنشور غير موجود" });
 
     const alreadyReported = (post.reports || []).some((r) => r.user && r.user.toString() === userId.toString());
-    if (alreadyReported) return res.status(400).json({ msg: "ظ„ظ‚ط¯ ظ‚ظ…طھ ط¨ط§ظ„ط¥ط¨ظ„ط§ط؛ ط¹ظ† ظ‡ط°ط§ ط§ظ„ظ…ظ†ط´ظˆط± ظ…ظ† ظ‚ط¨ظ„" });
+    if (alreadyReported) return res.status(400).json({ msg: "لقد قمت بالإبلاغ عن هذا المنشور من قبل" });
 
-    const finalReason = reason === "other" ? "ط³ط¨ط¨ ط¢ط®ط±" : reason || "ط³ط¨ط¨ ط؛ظٹط± ظ…ط­ط¯ط¯";
+    const finalReason = reason === "other" ? "سبب آخر" : reason || "سبب غير محدد";
 
     if (!Array.isArray(post.reports)) post.reports = [];
     post.reports.push({ user: userId, reason: finalReason, other: other || "", createdAt: new Date() });
@@ -3438,10 +3547,10 @@ app.post("/api/posts/report/:id", authMiddleware, async (req, res) => {
       status: "pending",
     });
 
-    return res.json({ msg: "طھظ… ط¥ط±ط³ط§ظ„ ط§ظ„ط¥ط¨ظ„ط§ط؛طŒ ط³ظٹطھظ… ظ…ط±ط§ط¬ط¹طھظ‡ ظ…ظ† ط§ظ„ط¥ط¯ط§ط±ط© âœ…", reportsCount: post.reports.length });
+    return res.json({ msg: "تم إرسال الإبلاغ، سيتم مراجعته من الإدارة ✅", reportsCount: post.reports.length });
   } catch (err) {
     console.error("POST /api/posts/report/:id error:", err);
-    return res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ… ط£ط«ظ†ط§ط، ط¥ط±ط³ط§ظ„ ط§ظ„ط¥ط¨ظ„ط§ط؛" });
+    return res.status(500).json({ msg: "خطأ في الخادم أثناء إرسال الإبلاغ" });
   }
 });
 
@@ -3451,10 +3560,10 @@ app.post("/api/posts/:id/save", authMiddleware, async (req, res) => {
     const userId = req.userId;
 
     const post = await Post.findById(postId);
-    if (!post) return res.status(404).json({ msg: "ط§ظ„ظ…ظ†ط´ظˆط± ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!post) return res.status(404).json({ msg: "المنشور غير موجود" });
 
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ msg: "ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!user) return res.status(404).json({ msg: "المستخدم غير موجود" });
 
     const ensureArr = (v) => (Array.isArray(v) ? v : []);
     user.savedPosts = ensureArr(user.savedPosts);
@@ -3473,13 +3582,13 @@ app.post("/api/posts/:id/save", authMiddleware, async (req, res) => {
     await user.save();
 
     return res.json({
-      msg: saved ? "طھظ… ط­ظپط¸ ط§ظ„ظ…ظ†ط´ظˆط±" : "طھظ… ط¥ظ„ط؛ط§ط، ط­ظپط¸ ط§ظ„ظ…ظ†ط´ظˆط±",
+      msg: saved ? "تم حفظ المنشور" : "تم إلغاء حفظ المنشور",
       saved,
       savedCount: user.savedPosts.length,
     });
   } catch (err) {
     console.error("ERROR in /api/posts/:id/save:", err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ…" });
+    res.status(500).json({ msg: "خطأ في الخادم" });
   }
 });
 
@@ -3496,7 +3605,7 @@ app.get("/api/saved", authMiddleware, async (req, res) => {
       ],
     });
 
-    if (!user) return res.status(404).json({ msg: "ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!user) return res.status(404).json({ msg: "المستخدم غير موجود" });
 
     const viewerIsAdmin = !!user.isAdmin;
     let savedPosts = user.savedPosts || [];
@@ -3519,7 +3628,7 @@ app.get("/api/saved", authMiddleware, async (req, res) => {
     return res.json(savedPosts);
   } catch (err) {
     console.error("ERROR in GET /api/saved:", err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ…" });
+    res.status(500).json({ msg: "خطأ في الخادم" });
   }
 });
 
@@ -3542,7 +3651,7 @@ app.post("/api/posts", authMiddleware, upload.single("media"), async (req, res) 
     }
 
     if (!text && !imageUrl && !videoUrl && !link) {
-      return res.status(400).json({ msg: "ظٹط¬ط¨ ط£ظ† ظٹط­طھظˆظٹ ط§ظ„ظ…ظ†ط´ظˆط± ط¹ظ„ظ‰ ظ†طµ ط£ظˆ طµظˆط±ط© ط£ظˆ ظپظٹط¯ظٹظˆ ط£ظˆ ط±ط§ط¨ط·" });
+      return res.status(400).json({ msg: "يجب أن يحتوي المنشور على نص أو صورة أو فيديو أو رابط" });
     }
 
     const newPost = new Post({
@@ -3557,10 +3666,10 @@ app.post("/api/posts", authMiddleware, upload.single("media"), async (req, res) 
     await newPost.save();
     await newPost.populate("user", "username fullName email avatar isPrivate followers");
 
-    res.json({ msg: "طھظ… ط¥ظ†ط´ط§ط، ط§ظ„ظ…ظ†ط´ظˆط±", post: newPost });
+    res.json({ msg: "تم إنشاء المنشور", post: newPost });
   } catch (err) {
     console.error("ERROR in /api/posts:", err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ…" });
+    res.status(500).json({ msg: "خطأ في الخادم" });
   }
 });
 
@@ -3610,7 +3719,7 @@ app.get("/api/posts", authMiddlewareOptional, async (req, res) => {
     res.json(posts);
   } catch (err) {
     console.error("ERROR in /api/posts:", err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ…" });
+    res.status(500).json({ msg: "خطأ في الخادم" });
   }
 });
 
@@ -3629,7 +3738,7 @@ app.get("/api/posts/:id", authMiddlewareOptional, async (req, res) => {
       .populate("comments.user", "username fullName avatar")
       .populate("likes", "username fullName avatar");
 
-    if (!post) return res.status(404).json({ msg: "ط§ظ„ظ…ظ†ط´ظˆط± ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!post) return res.status(404).json({ msg: "المنشور غير موجود" });
 
     if (post.user && post.user.isPrivate) {
       const ownerId = post.user._id?.toString?.();
@@ -3640,7 +3749,7 @@ app.get("/api/posts/:id", authMiddlewareOptional, async (req, res) => {
       const isFollower = viewerIdStr && followers.some((id) => id.toString() === viewerIdStr);
 
       if (!viewerIdStr || (!isOwner && !viewerIsAdmin && !isFollower)) {
-        return res.status(403).json({ msg: "ظ‡ط°ط§ ط§ظ„ط­ط³ط§ط¨ ط®ط§طµطŒ ظٹظ…ظƒظ† ظ„ظ„ظ…طھط§ط¨ط¹ظٹظ† ظپظ‚ط· ط±ط¤ظٹط© ظ…ظ†ط´ظˆط±ط§طھظ‡" });
+        return res.status(403).json({ msg: "هذا الحساب خاص، يمكن للمتابعين فقط رؤية منشوراته" });
       }
     }
 
@@ -3648,13 +3757,13 @@ app.get("/api/posts/:id", authMiddlewareOptional, async (req, res) => {
       post.privacy === "private" &&
       (!viewerId || (post.user._id.toString() !== viewerId.toString() && !viewerIsAdmin))
     ) {
-      return res.status(403).json({ msg: "ظ‡ط°ط§ ط§ظ„ظ…ظ†ط´ظˆط± ط®ط§طµ" });
+      return res.status(403).json({ msg: "هذا المنشور خاص" });
     }
 
     res.json(post);
   } catch (err) {
     console.error("ERROR in GET /api/posts/:id:", err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ…" });
+    res.status(500).json({ msg: "خطأ في الخادم" });
   }
 });
 
@@ -3690,17 +3799,17 @@ app.get("/api/posts/search", authMiddlewareOptional, async (req, res) => {
     return res.json({ posts });
   } catch (err) {
     console.error("GET /api/posts/search error:", err);
-    return res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط§ظ„ط¨ط­ط«" });
+    return res.status(500).json({ msg: "حدث خطأ أثناء البحث" });
   }
 });
 
 app.put("/api/posts/:id", authMiddleware, upload.single("media"), async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
-    if (!post) return res.status(404).json({ msg: "ط§ظ„ظ…ظ†ط´ظˆط± ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!post) return res.status(404).json({ msg: "المنشور غير موجود" });
 
     if (String(post.user) !== String(req.userId)) {
-      return res.status(403).json({ msg: "ط؛ظٹط± ظ…ط³ظ…ظˆط­ طھط¹ط¯ظٹظ„ ظ…ظ†ط´ظˆط± ط´ط®طµ ط¢ط®ط±" });
+      return res.status(403).json({ msg: "غير مسموح تعديل منشور شخص آخر" });
     }
 
     let { text, link, privacy } = req.body;
@@ -3725,23 +3834,23 @@ app.put("/api/posts/:id", authMiddleware, upload.single("media"), async (req, re
     }
 
     if (!post.text && !post.imageUrl && !post.videoUrl && !post.link) {
-      return res.status(400).json({ msg: "ظٹط¬ط¨ ط£ظ† ظٹط­طھظˆظٹ ط§ظ„ظ…ظ†ط´ظˆط± ط¹ظ„ظ‰ ظ†طµ ط£ظˆ طµظˆط±ط© ط£ظˆ ظپظٹط¯ظٹظˆ ط£ظˆ ط±ط§ط¨ط·" });
+      return res.status(400).json({ msg: "يجب أن يحتوي المنشور على نص أو صورة أو فيديو أو رابط" });
     }
 
     await post.save();
     await post.populate("user", "username fullName email avatar isPrivate followers");
 
-    res.json({ msg: "طھظ… طھط¹ط¯ظٹظ„ ط§ظ„ظ…ظ†ط´ظˆط±", post });
+    res.json({ msg: "تم تعديل المنشور", post });
   } catch (err) {
     console.error("ERROR in PUT /api/posts/:id:", err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ…" });
+    res.status(500).json({ msg: "خطأ في الخادم" });
   }
 });
 
 app.post("/api/posts/:id/like", authMiddleware, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
-    if (!post) return res.status(404).json({ msg: "ط§ظ„ظ…ظ†ط´ظˆط± ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!post) return res.status(404).json({ msg: "المنشور غير موجود" });
 
     const userId = req.userId.toString();
     const index = post.likes.findIndex((id) => id.toString() === userId);
@@ -3758,13 +3867,13 @@ app.post("/api/posts/:id/like", authMiddleware, async (req, res) => {
     await post.save();
 
     res.json({
-      msg: liked ? "طھظ… ط¥ط¶ط§ظپط© ط¥ط¹ط¬ط§ط¨" : "طھظ… ط¥ط²ط§ظ„ط© ط§ظ„ط¥ط¹ط¬ط§ط¨",
+      msg: liked ? "تم إضافة إعجاب" : "تم إزالة الإعجاب",
       liked,
       likesCount: post.likes.length,
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ…" });
+    res.status(500).json({ msg: "خطأ في الخادم" });
   }
 });
 
@@ -3772,10 +3881,10 @@ app.post("/api/posts/:id/comment", authMiddleware, async (req, res) => {
   try {
     const { text } = req.body;
     const trimmed = text?.trim();
-    if (!trimmed) return res.status(400).json({ msg: "ظ†طµ ط§ظ„طھط¹ظ„ظٹظ‚ ظ…ط·ظ„ظˆط¨" });
+    if (!trimmed) return res.status(400).json({ msg: "نص التعليق مطلوب" });
 
     const post = await Post.findById(req.params.id).populate("comments.user", "username fullName avatar");
-    if (!post) return res.status(404).json({ msg: "ط§ظ„ظ…ظ†ط´ظˆط± ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!post) return res.status(404).json({ msg: "المنشور غير موجود" });
 
     const comment = { text: trimmed, user: req.userId, createdAt: new Date() };
     post.comments.push(comment);
@@ -3785,7 +3894,7 @@ app.post("/api/posts/:id/comment", authMiddleware, async (req, res) => {
     const lastComment = post.comments[post.comments.length - 1];
 
     res.json({
-      msg: "طھظ… ط¥ط¶ط§ظپط© ط§ظ„طھط¹ظ„ظٹظ‚",
+      msg: "تم إضافة التعليق",
       comment: {
         _id: lastComment._id,
         text: lastComment.text,
@@ -3800,7 +3909,7 @@ app.post("/api/posts/:id/comment", authMiddleware, async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ…" });
+    res.status(500).json({ msg: "خطأ في الخادم" });
   }
 });
 
@@ -3809,34 +3918,34 @@ app.put("/api/posts/:postId/comments/:commentId", authMiddleware, async (req, re
     const { postId, commentId } = req.params;
     const { text } = req.body;
     const trimmed = text?.trim();
-    if (!trimmed) return res.status(400).json({ msg: "ظ†طµ ط§ظ„طھط¹ظ„ظٹظ‚ ظ…ط·ظ„ظˆط¨" });
+    if (!trimmed) return res.status(400).json({ msg: "نص التعليق مطلوب" });
 
     let post;
     try {
       post = await Post.findById(postId);
     } catch {
-      return res.status(400).json({ msg: "ظ…ط¹ط±ظپ ط§ظ„ظ…ظ†ط´ظˆط± ط؛ظٹط± طµط§ظ„ط­" });
+      return res.status(400).json({ msg: "معرف المنشور غير صالح" });
     }
 
-    if (!post) return res.status(404).json({ msg: "ط§ظ„ظ…ظ†ط´ظˆط± ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!post) return res.status(404).json({ msg: "المنشور غير موجود" });
 
     const comment = post.comments.id(commentId);
-    if (!comment) return res.status(404).json({ msg: "ط§ظ„طھط¹ظ„ظٹظ‚ ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!comment) return res.status(404).json({ msg: "التعليق غير موجود" });
 
     const userId = req.userId.toString();
     const isOwner = comment.user && comment.user.toString() === userId;
-    if (!isOwner) return res.status(403).json({ msg: "ط؛ظٹط± ظ…ط³ظ…ظˆط­ طھط¹ط¯ظٹظ„ ظ‡ط°ط§ ط§ظ„طھط¹ظ„ظٹظ‚" });
+    if (!isOwner) return res.status(403).json({ msg: "غير مسموح تعديل هذا التعليق" });
 
     comment.text = trimmed;
     await post.save();
 
     return res.json({
-      msg: "طھظ… طھط¹ط¯ظٹظ„ ط§ظ„طھط¹ظ„ظٹظ‚",
+      msg: "تم تعديل التعليق",
       comment: { _id: comment._id, text: comment.text, createdAt: comment.createdAt },
     });
   } catch (err) {
     console.error("ERROR update comment:", err);
-    return res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ…" });
+    return res.status(500).json({ msg: "خطأ في الخادم" });
   }
 });
 
@@ -3848,27 +3957,27 @@ app.delete("/api/posts/:postId/comments/:commentId", authMiddleware, async (req,
     try {
       post = await Post.findById(postId);
     } catch {
-      return res.status(400).json({ msg: "ظ…ط¹ط±ظپ ط§ظ„ظ…ظ†ط´ظˆط± ط؛ظٹط± طµط§ظ„ط­" });
+      return res.status(400).json({ msg: "معرف المنشور غير صالح" });
     }
 
-    if (!post) return res.status(404).json({ msg: "ط§ظ„ظ…ظ†ط´ظˆط± ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!post) return res.status(404).json({ msg: "المنشور غير موجود" });
 
     const comment = post.comments.id(commentId);
-    if (!comment) return res.status(404).json({ msg: "ط§ظ„طھط¹ظ„ظٹظ‚ ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!comment) return res.status(404).json({ msg: "التعليق غير موجود" });
 
     const userId = req.userId.toString();
     const isCommentOwner = comment.user && comment.user.toString() === userId;
     const isPostOwner = post.user && post.user.toString() === userId;
 
-    if (!isCommentOwner && !isPostOwner) return res.status(403).json({ msg: "ط؛ظٹط± ظ…ط³ظ…ظˆط­ ط­ط°ظپ ظ‡ط°ط§ ط§ظ„طھط¹ظ„ظٹظ‚" });
+    if (!isCommentOwner && !isPostOwner) return res.status(403).json({ msg: "غير مسموح حذف هذا التعليق" });
 
     comment.deleteOne();
     await post.save();
 
-    return res.json({ msg: "طھظ… ط­ط°ظپ ط§ظ„طھط¹ظ„ظٹظ‚", commentsCount: post.comments.length });
+    return res.json({ msg: "تم حذف التعليق", commentsCount: post.comments.length });
   } catch (err) {
     console.error("ERROR delete comment:", err);
-    return res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ…" });
+    return res.status(500).json({ msg: "خطأ في الخادم" });
   }
 });
 
@@ -3881,22 +3990,22 @@ app.delete("/api/posts/:id", authMiddleware, async (req, res) => {
     try {
       post = await Post.findById(postId);
     } catch (e) {
-      console.error("â‌Œ invalid postId:", e);
-      return res.status(400).json({ msg: "ظ…ط¹ط±ظ‘ظپ ط§ظ„ظ…ظ†ط´ظˆط± ط؛ظٹط± طµط§ظ„ط­" });
+      console.error("\u274c invalid postId:", e);
+      return res.status(400).json({ msg: "معرّف المنشور غير صالح" });
     }
 
-    if (!post) return res.status(404).json({ msg: "ط§ظ„ظ…ظ†ط´ظˆط± ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
-    if (!post.user) return res.status(403).json({ msg: "ظ„ط§ ظٹظ…ظƒظ† ط­ط°ظپ ظ‡ط°ط§ ط§ظ„ظ…ظ†ط´ظˆط± (ظ…ط§ظ„ظƒ ط؛ظٹط± ظ…ط¹ط±ظˆظپ)" });
+    if (!post) return res.status(404).json({ msg: "المنشور غير موجود" });
+    if (!post.user) return res.status(403).json({ msg: "لا يمكن حذف هذا المنشور (مالك غير معروف)" });
 
     if (post.user.toString() !== userId.toString()) {
-      return res.status(403).json({ msg: "ط؛ظٹط± ظ…ط³ظ…ظˆط­ ط­ط°ظپ ظ…ظ†ط´ظˆط± ط´ط®طµ ط¢ط®ط±" });
+      return res.status(403).json({ msg: "غير مسموح حذف منشور شخص آخر" });
     }
 
     await post.deleteOne();
-    return res.json({ msg: "طھظ… ط­ط°ظپ ط§ظ„ظ…ظ†ط´ظˆط±" });
+    return res.json({ msg: "تم حذف المنشور" });
   } catch (err) {
     console.error("ERROR in DELETE /api/posts/:id", err);
-    return res.status(500).json({ msg: "ط®ط·ط£ ظپظٹ ط§ظ„ط®ط§ط¯ظ…" });
+    return res.status(500).json({ msg: "خطأ في الخادم" });
   }
 });
 
@@ -3906,19 +4015,19 @@ app.get("/make-me-admin", async (req, res) => {
     const email = "ahmadhjhmod4@gmail.com";
 
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ msg: "ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ظˆط¬ظˆط¯", email });
+    if (!user) return res.status(404).json({ msg: "المستخدم غير موجود", email });
 
     user.isAdmin = true;
     await user.save();
 
     res.json({
-      msg: "طھظ… طھط­ظˆظٹظ„ ظ‡ط°ط§ ط§ظ„ط­ط³ط§ط¨ ط¥ظ„ظ‰ ظ…ط´ط±ظپ (Admin) ط¨ظ†ط¬ط§ط­ âœ…",
+      msg: "تم تحويل هذا الحساب إلى مشرف (Admin) بنجاح ✅",
       email: user.email,
       isAdmin: user.isAdmin,
     });
   } catch (err) {
     console.error("make-me-admin error:", err);
-    res.status(500).json({ msg: "ط®ط·ط£ ط£ط«ظ†ط§ط، ط¬ط¹ظ„ ط§ظ„ط­ط³ط§ط¨ ظ…ط´ط±ظپط§ظ‹" });
+    res.status(500).json({ msg: "خطأ أثناء جعل الحساب مشرفاً" });
   }
 });
 
@@ -3942,7 +4051,7 @@ app.get("/api/admin/reports", authMiddleware, adminMiddleware, async (req, res) 
     res.json(reports);
   } catch (err) {
     console.error("GET /api/admin/reports error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¬ظ„ط¨ ط§ظ„ط¨ظ„ط§ط؛ط§طھ" });
+    res.status(500).json({ msg: "حدث خطأ أثناء جلب البلاغات" });
   }
 });
 
@@ -3950,14 +4059,14 @@ app.post("/api/admin/reports/:id/accept", authMiddleware, adminMiddleware, async
   try {
     const reportId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(reportId)) {
-      return res.status(400).json({ msg: "ظ…ط¹ط±ظ‘ظپ ط§ظ„ط¨ظ„ط§ط؛ ط؛ظٹط± طµط§ظ„ط­" });
+      return res.status(400).json({ msg: "معرّف البلاغ غير صالح" });
     }
 
     const report = await Report.findById(reportId);
-    if (!report) return res.status(404).json({ msg: "ط§ظ„ط¨ظ„ط§ط؛ ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!report) return res.status(404).json({ msg: "البلاغ غير موجود" });
 
     if (report.status !== "pending") {
-      return res.status(400).json({ msg: "طھظ…طھ ظ…ط¹ط§ظ„ط¬ط© ظ‡ط°ط§ ط§ظ„ط¨ظ„ط§ط؛ ظ…ط³ط¨ظ‚ط§ظ‹" });
+      return res.status(400).json({ msg: "تمت معالجة هذا البلاغ مسبقاً" });
     }
 
     if (report.targetType === "post" && report.post) {
@@ -3971,10 +4080,10 @@ app.post("/api/admin/reports/:id/accept", authMiddleware, adminMiddleware, async
     report.status = "accepted";
     await report.save();
 
-    res.json({ msg: "طھظ… ظ‚ط¨ظˆظ„ ط§ظ„ط¨ظ„ط§ط؛ ظˆظ…ط¹ط§ظ„ط¬ط© ط§ظ„ظ…ط­طھظˆظ‰", report });
+    res.json({ msg: "تم قبول البلاغ ومعالجة المحتوى", report });
   } catch (err) {
     console.error("POST /api/admin/reports/:id/accept error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ظ‚ط¨ظˆظ„ ط§ظ„ط¨ظ„ط§ط؛" });
+    res.status(500).json({ msg: "حدث خطأ أثناء قبول البلاغ" });
   }
 });
 
@@ -3982,23 +4091,23 @@ app.post("/api/admin/reports/:id/reject", authMiddleware, adminMiddleware, async
   try {
     const reportId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(reportId)) {
-      return res.status(400).json({ msg: "ظ…ط¹ط±ظ‘ظپ ط§ظ„ط¨ظ„ط§ط؛ ط؛ظٹط± طµط§ظ„ط­" });
+      return res.status(400).json({ msg: "معرّف البلاغ غير صالح" });
     }
 
     const report = await Report.findById(reportId);
-    if (!report) return res.status(404).json({ msg: "ط§ظ„ط¨ظ„ط§ط؛ ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!report) return res.status(404).json({ msg: "البلاغ غير موجود" });
 
     if (report.status !== "pending") {
-      return res.status(400).json({ msg: "طھظ…طھ ظ…ط¹ط§ظ„ط¬ط© ظ‡ط°ط§ ط§ظ„ط¨ظ„ط§ط؛ ظ…ط³ط¨ظ‚ط§ظ‹" });
+      return res.status(400).json({ msg: "تمت معالجة هذا البلاغ مسبقاً" });
     }
 
     report.status = "rejected";
     await report.save();
 
-    res.json({ msg: "طھظ… ط±ظپط¶ ط§ظ„ط¨ظ„ط§ط؛", report });
+    res.json({ msg: "تم رفض البلاغ", report });
   } catch (err) {
     console.error("POST /api/admin/reports/:id/reject error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط±ظپط¶ ط§ظ„ط¨ظ„ط§ط؛" });
+    res.status(500).json({ msg: "حدث خطأ أثناء رفض البلاغ" });
   }
 });
 
@@ -4013,7 +4122,7 @@ app.post("/api/admin/dev/migrate-story-reports", authMiddleware, adminMiddleware
 
       for (const embeddedReport of story.reports || []) {
         const reporterId = embeddedReport.user;
-        const reason = embeddedReport.reason || "ظ…ط­طھظˆظ‰ ط؛ظٹط± ظ„ط§ط¦ظ‚";
+        const reason = embeddedReport.reason || "محتوى غير لائق";
         const at = embeddedReport.at || story.createdAt || new Date();
 
         const exists = await Report.findOne({
@@ -4041,10 +4150,10 @@ app.post("/api/admin/dev/migrate-story-reports", authMiddleware, adminMiddleware
       }
     }
 
-    res.json({ msg: "طھظ…طھ ظ‡ط¬ط±ط© ط¨ظ„ط§ط؛ط§طھ ط§ظ„ط³طھظˆط±ظٹ ط¨ظ†ط¬ط§ط­", created: createdCount, skipped: skippedCount });
+    res.json({ msg: "تمت هجرة بلاغات الستوري بنجاح", created: createdCount, skipped: skippedCount });
   } catch (err) {
     console.error("migrate-story-reports error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ظ‡ط¬ط±ط© ط¨ظ„ط§ط؛ط§طھ ط§ظ„ط³طھظˆط±ظٹ" });
+    res.status(500).json({ msg: "حدث خطأ أثناء هجرة بلاغات الستوري" });
   }
 });
 
@@ -4058,7 +4167,7 @@ app.get("/api/admin/users", authMiddleware, adminMiddleware, async (req, res) =>
     res.json(users);
   } catch (err) {
     console.error("GET /api/admin/users error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¬ظ„ط¨ ط§ظ„ظ…ط³طھط®ط¯ظ…ظٹظ†" });
+    res.status(500).json({ msg: "حدث خطأ أثناء جلب المستخدمين" });
   }
 });
 
@@ -4067,15 +4176,15 @@ app.post("/api/admin/users/:id/make-admin", authMiddleware, adminMiddleware, asy
     const targetId = req.params.id;
 
     const user = await User.findById(targetId);
-    if (!user) return res.status(404).json({ msg: "ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!user) return res.status(404).json({ msg: "المستخدم غير موجود" });
 
-    if (user.isAdmin) return res.status(400).json({ msg: "ظ‡ط°ط§ ط§ظ„ظ…ط³طھط®ط¯ظ… ظ…ط´ط±ظپ ط¨ط§ظ„ظپط¹ظ„" });
+    if (user.isAdmin) return res.status(400).json({ msg: "هذا المستخدم مشرف بالفعل" });
 
     user.isAdmin = true;
     await user.save();
 
     res.json({
-      msg: "طھظ… طھط±ظ‚ظٹط© ط§ظ„ظ…ط³طھط®ط¯ظ… ط¥ظ„ظ‰ ظ…ط´ط±ظپ âœ…",
+      msg: "تم ترقية المستخدم إلى مشرف ✅",
       user: {
         _id: user._id,
         username: user.username,
@@ -4086,7 +4195,7 @@ app.post("/api/admin/users/:id/make-admin", authMiddleware, adminMiddleware, asy
     });
   } catch (err) {
     console.error("POST /api/admin/users/:id/make-admin error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، طھط±ظ‚ظٹط© ط§ظ„ظ…ط³طھط®ط¯ظ…" });
+    res.status(500).json({ msg: "حدث خطأ أثناء ترقية المستخدم" });
   }
 });
 
@@ -4096,19 +4205,19 @@ app.post("/api/admin/users/:id/remove-admin", authMiddleware, adminMiddleware, a
     const currentUserId = req.userId;
 
     if (String(targetId) === String(currentUserId)) {
-      return res.status(400).json({ msg: "ظ„ط§ ظٹظ…ظƒظ†ظƒ ط¥ط²ط§ظ„ط© طµظ„ط§ط­ظٹط© ط§ظ„ظ…ط´ط±ظپ ط¹ظ† ظ†ظپط³ظƒ" });
+      return res.status(400).json({ msg: "لا يمكنك إزالة صلاحية المشرف عن نفسك" });
     }
 
     const user = await User.findById(targetId);
-    if (!user) return res.status(404).json({ msg: "ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ظˆط¬ظˆط¯" });
+    if (!user) return res.status(404).json({ msg: "المستخدم غير موجود" });
 
-    if (!user.isAdmin) return res.status(400).json({ msg: "ظ‡ط°ط§ ط§ظ„ظ…ط³طھط®ط¯ظ… ظ„ظٹط³ ظ…ط´ط±ظپط§ظ‹ ط£طµظ„ط§ظ‹" });
+    if (!user.isAdmin) return res.status(400).json({ msg: "هذا المستخدم ليس مشرفاً أصلاً" });
 
     user.isAdmin = false;
     await user.save();
 
     res.json({
-      msg: "طھظ… ط¥ط²ط§ظ„ط© طµظ„ط§ط­ظٹط© ط§ظ„ظ…ط´ط±ظپ ط¹ظ† ط§ظ„ظ…ط³طھط®ط¯ظ…",
+      msg: "تم إزالة صلاحية المشرف عن المستخدم",
       user: {
         _id: user._id,
         username: user.username,
@@ -4119,7 +4228,7 @@ app.post("/api/admin/users/:id/remove-admin", authMiddleware, adminMiddleware, a
     });
   } catch (err) {
     console.error("POST /api/admin/users/:id/remove-admin error:", err);
-    res.status(500).json({ msg: "ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، طھط¹ط¯ظٹظ„ طµظ„ط§ط­ظٹط§طھ ط§ظ„ظ…ط³طھط®ط¯ظ…" });
+    res.status(500).json({ msg: "حدث خطأ أثناء تعديل صلاحيات المستخدم" });
   }
 });
 

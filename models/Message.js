@@ -97,6 +97,25 @@ const messageSchema = new Schema(
     forwardOf: { type: Schema.Types.ObjectId, ref: "Message", default: null },
     forwardComment: { type: String, trim: true, default: "" },
     forwardPreview: { type: messagePreviewSchema, default: null },
+
+    // ======================
+    // ✅ Edit / Reactions
+    // ======================
+    editedAt: { type: Date, default: null },
+    editedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    reactions: {
+      type: [
+        new Schema(
+          {
+            user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+            emoji: { type: String, trim: true, default: "" },
+            at: { type: Date, default: Date.now },
+          },
+          { _id: false }
+        ),
+      ],
+      default: [],
+    },
   },
   { timestamps: true }
 );
