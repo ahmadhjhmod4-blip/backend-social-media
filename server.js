@@ -58,6 +58,9 @@ import Conversation from "./models/Conversation.js"; // â­گ ظ…ظˆط¯ظٹ
 import Message from "./models/Message.js"; // â­گ ظ…ظˆط¯ظٹظ„ ط§ظ„ط±ط³ط§ط¦ظ„
 import CallLog from "./models/CallLog.js"; // â­گ ط³ط¬ظ„ ط§ظ„ط§طھطµط§ظ„ط§طھ
 import NotificationToken from "./models/NotificationToken.js";
+import AuthSession from "./models/AuthSession.js";
+import ProfileView from "./models/ProfileView.js";
+import FollowEvent from "./models/FollowEvent.js";
 mongoose.set("strictPopulate", false);
 
 async function sendIncomingCallPush({ toUserId, fromUserId, type, callId }) {
@@ -79,18 +82,9 @@ async function sendIncomingCallPush({ toUserId, fromUserId, type, callId }) {
     );
     const message = {
       tokens,
-      notification: {
-        title: "Incoming Call",
-        body: `${isVideo ? "Video" : "Voice"} call from ${fromName}`,
-      },
       android: {
         priority: "high",
-        notification: {
-          sound: "default",
-          channelId: "incoming_calls",
-          priority: "max",
-          visibility: "public",
-        },
+        ttl: 60000,
       },
       apns: {
         payload: {
@@ -113,6 +107,171 @@ async function sendIncomingCallPush({ toUserId, fromUserId, type, callId }) {
   } catch (e) {
     console.error("sendIncomingCallPush error:", e?.message || e);
   }
+}
+
+function _pushMessagePreview({ text = "", type = "text", attachments = [] } = {}) {
+  const cleanText = String(text || "").trim();
+  if (cleanText) return cleanText.slice(0, 180);
+
+  const list = Array.isArray(attachments) ? attachments : [];
+  const first = list[0] || {};
+  const firstType = String(first?.type || type || "file").toLowerCase();
+
+  if (firstType === "image") return "Photo";
+  if (firstType === "video") return "Video";
+  if (firstType === "audio") return "Voice message";
+  if (firstType === "sticker") return "Sticker";
+  if (list.length > 1) return "Attachments";
+  return "Attachment";
+}
+
+async function sendChatMessagePush({
+  toUserId,
+  fromUserId,
+  fromName,
+  conversationId,
+  conversationTitle = "",
+  messageId = "",
+  messageType = "text",
+  text = "",
+  attachments = [],
+}) {
+  try {
+    if (!firebaseReady) return;
+
+    const to = String(toUserId || "").trim();
+    const from = String(fromUserId || "").trim();
+    const cid = String(conversationId || "").trim();
+    if (!to || !from || !cid || to === from) return;
+
+    const doc = await NotificationToken.findOne({ userId: to }).lean();
+    const tokens = Array.isArray(doc?.tokens) ? doc.tokens.filter(Boolean) : [];
+    if (!tokens.length) return;
+
+    const senderName = String(fromName || "").trim() || "User";
+    const preview = _pushMessagePreview({
+      text,
+      type: messageType,
+      attachments,
+    });
+    const titleBase = String(conversationTitle || "").trim();
+    const title = titleBase || senderName;
+    const body = titleBase ? `${senderName}: ${preview}` : preview;
+
+    const payload = {
+      tokens,
+      notification: {
+        title,
+        body,
+      },
+      android: {
+        priority: "high",
+        collapseKey: `chat_${cid}`,
+        notification: {
+          sound: "default",
+          channelId: "chat_messages",
+          priority: "high",
+          visibility: "private",
+          tag: `chat_${cid}`,
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: "default",
+            contentAvailable: true,
+          },
+        },
+      },
+      data: {
+        type: "chat_message",
+        conversationId: cid,
+        messageId: String(messageId || ""),
+        senderId: from,
+        senderName,
+        preview,
+        messageType: String(messageType || "text"),
+        conversationTitle: titleBase,
+      },
+    };
+
+    await admin.messaging().sendEachForMulticast(payload);
+  } catch (e) {
+    console.error("sendChatMessagePush error:", e?.message || e);
+  }
+}
+
+function _normalizeMessagePermission(raw) {
+  const v = String(raw || "").trim().toLowerCase();
+  if (v === "followers") return "followers";
+  if (v === "none") return "none";
+  return "everyone";
+}
+
+function _safeUserAgent(req) {
+  return String(req.headers["user-agent"] || "").slice(0, 240);
+}
+
+function _safeIp(req) {
+  const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  const ip = forwarded || req.ip || req.socket?.remoteAddress || "";
+  return String(ip).slice(0, 80);
+}
+
+function _safePlatform(req) {
+  return String(req.headers["x-platform"] || req.headers["x-client-platform"] || "").slice(0, 60);
+}
+
+function _safeAppVersion(req) {
+  return String(req.headers["x-app-version"] || "").slice(0, 40);
+}
+
+function _todayKey(date = new Date()) {
+  const d = new Date(date);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+async function createSessionAndToken(userId, req) {
+  const session = await AuthSession.create({
+    userId,
+    userAgent: _safeUserAgent(req),
+    ip: _safeIp(req),
+    platform: _safePlatform(req),
+    appVersion: _safeAppVersion(req),
+    isRevoked: false,
+    lastSeenAt: new Date(),
+  });
+
+  const token = jwt.sign(
+    { id: userId, sid: String(session._id) },
+    JWT_SECRET_EFFECTIVE,
+    { expiresIn: "7d" },
+  );
+  return { token, sessionId: String(session._id) };
+}
+
+async function recordProfileView({ profileUserId, viewerUserId }) {
+  try {
+    const profileId = String(profileUserId || "").trim();
+    const viewerId = String(viewerUserId || "").trim();
+    if (!profileId || !viewerId || profileId === viewerId) return;
+    await ProfileView.updateOne(
+      {
+        profileUserId: profileId,
+        viewerUserId: viewerId,
+        dayKey: _todayKey(),
+      },
+      {
+        $set: {
+          viewedAt: new Date(),
+        },
+      },
+      { upsert: true },
+    );
+  } catch (_) {}
 }
 
 // Counter model for publicId sequence
@@ -200,13 +359,28 @@ function isUserOnline(userId) {
 function emitPresence(userId, online) {
   const uid = String(userId || "").trim();
   if (!uid) return;
-  const lastSeen = online
-    ? null
-    : (lastSeenByUser.get(uid) || new Date().toISOString());
-  io.emit("user:presence", {
-    userId: uid,
-    online: !!online,
-    lastSeen,
+  const run = async () => {
+    const user = await User.findById(uid).select("privacy").lean();
+    const showLastSeen = user?.privacy?.showLastSeen !== false;
+    const lastSeen = !showLastSeen
+      ? null
+      : online
+        ? null
+        : (lastSeenByUser.get(uid) || new Date().toISOString());
+    io.emit("user:presence", {
+      userId: uid,
+      online: !!online,
+      lastSeen,
+      hideLastSeen: !showLastSeen,
+    });
+  };
+  run().catch(() => {
+    io.emit("user:presence", {
+      userId: uid,
+      online: !!online,
+      lastSeen: null,
+      hideLastSeen: true,
+    });
   });
 }
 
@@ -357,7 +531,7 @@ function computeMessageType(text = "", attachments = []) {
 
 // ================== Socket Auth (JWT) ==================
 // âœ… ظٹظ…ظ†ط¹ ط§ظ„طھط²ظˆظٹط± (ط¹ط¯ظ… ط§ظ„ط«ظ‚ط© ط¨ظ€ senderId ط§ظ„ظ‚ط§ط¯ظ… ظ…ظ† ط§ظ„ظپط±ظˆظ†طھ)
-io.use((socket, next) => {
+io.use(async (socket, next) => {
   try {
     const token =
       socket.handshake?.auth?.token ||
@@ -369,8 +543,18 @@ io.use((socket, next) => {
     const decoded = jwt.verify(token, JWT_SECRET_EFFECTIVE);
     const userId = decoded.id || decoded.userId || decoded._id;
     if (!userId) return next(new Error("BAD_TOKEN"));
+    const sid = String(decoded.sid || "").trim();
+    if (sid) {
+      const session = await AuthSession.findOne({
+        _id: sid,
+        userId,
+        isRevoked: false,
+      }).select("_id");
+      if (!session) return next(new Error("BAD_SESSION"));
+    }
 
     socket.userId = String(userId);
+    socket.sessionId = sid;
     next();
   } catch {
     next(new Error("BAD_TOKEN"));
@@ -704,13 +888,44 @@ const populatedMessage = await message.populate("sender", "username fullName ava
       io.to(`user-${senderId}`).emit("new-message", payload);
 
       // ط¥ط±ط³ط§ظ„ ظ„ظ„ظ…ط³طھظ‚ط¨ظ„/ط§ظ„ظ…ط¬ظ…ظˆط¹ط©
+      const pushTargets = [];
       if (!conv.isGroup) {
-        if (receiverId) io.to(`user-${receiverId}`).emit("new-message", payload);
+        if (receiverId) {
+          io.to(`user-${receiverId}`).emit("new-message", payload);
+          pushTargets.push(String(receiverId));
+        }
       } else {
         for (const p of conv.participants || []) {
           const pid = String(p);
-          if (pid !== senderId) io.to(`user-${pid}`).emit("new-message", payload);
+          if (pid !== senderId) {
+            io.to(`user-${pid}`).emit("new-message", payload);
+            pushTargets.push(pid);
+          }
         }
+      }
+
+      const senderName = String(
+        payload?.sender?.fullName || payload?.sender?.username || "User"
+      );
+      const normalizedType = String(payload?.type || msgType || "text");
+      const normalizedText = String(payload?.text || finalText || "");
+      const normalizedAttachments = Array.isArray(payload?.attachments)
+        ? payload.attachments
+        : (Array.isArray(finalAttachments) ? finalAttachments : []);
+      for (const targetUserId of pushTargets) {
+        sendChatMessagePush({
+          toUserId: targetUserId,
+          fromUserId: senderId,
+          fromName: senderName,
+          conversationId,
+          conversationTitle: String(conv?.title || ""),
+          messageId: String(payload?._id || message?._id || ""),
+          messageType: normalizedType,
+          text: normalizedText,
+          attachments: normalizedAttachments,
+        }).catch((e) => {
+          console.error("socket sendChatMessagePush error:", e?.message || e);
+        });
       }
 
       socket.emit("message-sent", { success: true, messageId: message._id });
@@ -1040,7 +1255,22 @@ app.use((req, res, next) => {
 
 // ظ…ظ„ظپط§طھ ط§ظ„ط±ظپط¹ (ط§ظ„طµظˆط± / ط§ظ„ظپظٹط¯ظٹظˆ / ط§ظ„طµظˆطھ) ظƒظ€ static
 // âœ… ط§ظ„ظ…ط³ط§ط± ط§ظ„ط­ظ‚ظٹظ‚ظٹ ط§ظ„ط°ظٹ ظٹط­ظپط¸ ظپظٹظ‡ multer (upload.js) â€” ظ…ظ‡ظ… ط¬ط¯ط§ظ‹ ط¹ظ„ظ‰ Render
-app.use("/uploads", express.static(uploadsDir));
+const uploadsStaticOptions = {
+  etag: true,
+  maxAge: "7d",
+  setHeaders: (res, filePath) => {
+    const lower = String(filePath || "").toLowerCase();
+    const mediaLike =
+      /\.(png|jpe?g|gif|webp|heic|heif|mp4|mov|mkv|webm|avi|m4a|aac|ogg|wav|mp3|pdf|zip|rar|7z)$/i.test(
+        lower
+      );
+    if (mediaLike) {
+      res.setHeader("Cache-Control", "public, max-age=604800, stale-while-revalidate=86400");
+      return;
+    }
+    res.setHeader("Cache-Control", "public, max-age=3600");
+  },
+};
 // âœ… ظٹط¨ظ†ظٹ URL طµط­ظٹط­ ط­طھظ‰ ظ„ظˆ ط§ظ„ظ…ظ„ظپ ط¯ط§ط®ظ„ subfolder ظ…ط«ظ„: users/<id>/file.ext
 function buildUploadsUrlFromMulterFile(f) {
   if (!f) return "";
@@ -1061,10 +1291,19 @@ const UPLOADS_DIR_BACKEND = path.join(__dirname, "uploads");
 const UPLOADS_DIR_PUBLIC = path.join(__dirname, "public", "uploads");
 const UPLOADS_DIR_ROOT = path.join(process.cwd(), "uploads");
 
-app.use("/uploads", express.static(UPLOADS_DIR_BACKEND));
-if (UPLOADS_DIR_PUBLIC !== UPLOADS_DIR_BACKEND) app.use("/uploads", express.static(UPLOADS_DIR_PUBLIC));
-if (UPLOADS_DIR_ROOT !== UPLOADS_DIR_BACKEND && UPLOADS_DIR_ROOT !== UPLOADS_DIR_PUBLIC) {
-  app.use("/uploads", express.static(UPLOADS_DIR_ROOT));
+const uploadStaticCandidates = Array.from(
+  new Set(
+    [
+      uploadsDir,
+      UPLOADS_DIR_BACKEND,
+      UPLOADS_DIR_PUBLIC,
+      UPLOADS_DIR_ROOT,
+    ].map((p) => path.resolve(p))
+  )
+);
+
+for (const uploadPath of uploadStaticCandidates) {
+  app.use("/uploads", express.static(uploadPath, uploadsStaticOptions));
 }
 // طھظ‚ط¯ظٹظ… ظ…ظ„ظپط§طھ ط§ظ„ظˆط§ط¬ظ‡ط© (HTML/CSS/JS) ظ…ظ† ظ…ط¬ظ„ط¯ public
 app.use(express.static(path.join(__dirname, "public")));
@@ -1147,7 +1386,7 @@ app.post("/api/upload", uploadAuthGuard, runUpload(upload.any()), async (req, re
 // ================== ظ…ظٹط¯ظ„ظˆظٹط± JWT ==================
 
 // ظ…ظٹط¯ظ„ظˆظٹط± ط¥ط¬ط¨ط§ط±ظٹ
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers["authorization"];
 
   if (!authHeader) {
@@ -1169,8 +1408,25 @@ const authMiddleware = (req, res, next) => {
       console.error("JWT payload بدون userId:", decoded);
       return res.status(401).json({ msg: "التوكن غير صالح" });
     }
+    const sid = String(decoded.sid || "").trim();
+    if (sid) {
+      const session = await AuthSession.findOne({
+        _id: sid,
+        userId,
+        isRevoked: false,
+      }).select("_id");
+      if (!session) {
+        return res.status(401).json({ msg: "انتهت الجلسة. سجل الدخول من جديد" });
+      }
+      req.sessionId = sid;
+      AuthSession.updateOne(
+        { _id: sid },
+        { $set: { lastSeenAt: new Date() } },
+      ).catch(() => {});
+    }
 
     req.userId = userId;
+    req.user = { id: userId };
     next();
   } catch (err) {
     console.error("JWT verify error:", err);
@@ -1276,7 +1532,7 @@ app.get("/api/calls/rtc-config", authMiddleware, (req, res) => {
 
 
 // ظ…ظٹط¯ظ„ظˆظٹط± ط§ط®طھظٹط§ط±ظٹ (ظ„ط§ ظٹط±ظ…ظٹ ط®ط·ط£ ظ„ظˆ ظ…ط§ ظپظٹ طھظˆظƒظ†)
-const authMiddlewareOptional = (req, res, next) => {
+const authMiddlewareOptional = async (req, res, next) => {
   const authHeader = req.headers["authorization"];
   if (!authHeader) return next();
 
@@ -1288,6 +1544,16 @@ const authMiddlewareOptional = (req, res, next) => {
     const decoded = jwt.verify(token, JWT_SECRET_EFFECTIVE);
     const userId = decoded.id || decoded.userId || decoded._id;
     if (userId) {
+      const sid = String(decoded.sid || "").trim();
+      if (sid) {
+        const session = await AuthSession.findOne({
+          _id: sid,
+          userId,
+          isRevoked: false,
+        }).select("_id");
+        if (!session) return next();
+        req.sessionId = sid;
+      }
       req.userId = userId;
       req.user = { id: userId };
     }
@@ -1670,12 +1936,26 @@ app.post("/api/login", async (req, res) => {
       }
 
       await ensurePublicIdForUser(user);
-
-      const token = jwt.sign({ id: user._id }, JWT_SECRET_EFFECTIVE, { expiresIn: "7d" });
+      const { token, sessionId } = await createSessionAndToken(user._id, req);
+      await User.updateOne(
+        { _id: user._id },
+        {
+          $set: {
+            lastLoginAt: new Date(),
+            lastLoginIp: _safeIp(req),
+            lastLoginDevice: _safeUserAgent(req),
+            accountStatus:
+              String(user.accountStatus || "").trim() === "new"
+                ? "active"
+                : String(user.accountStatus || "active"),
+          },
+        },
+      );
 
       res.json({
         msg: "تم تسجيل الدخول بنجاح",
         token,
+        sessionId,
         user: {
           id: user._id,
           name: user.fullName || user.username,
@@ -1769,12 +2049,26 @@ app.post("/api/auth/login", async (req, res) => {
       }
 
       await ensurePublicIdForUser(user);
-
-      const token = jwt.sign({ id: user._id }, JWT_SECRET_EFFECTIVE, { expiresIn: "7d" });
+      const { token, sessionId } = await createSessionAndToken(user._id, req);
+      await User.updateOne(
+        { _id: user._id },
+        {
+          $set: {
+            lastLoginAt: new Date(),
+            lastLoginIp: _safeIp(req),
+            lastLoginDevice: _safeUserAgent(req),
+            accountStatus:
+              String(user.accountStatus || "").trim() === "new"
+                ? "active"
+                : String(user.accountStatus || "active"),
+          },
+        },
+      );
 
       res.json({
         msg: "تم تسجيل الدخول بنجاح",
         token,
+        sessionId,
         user: {
           id: user._id,
           _id: user._id,
@@ -1835,7 +2129,7 @@ app.get("/api/users/search", authMiddleware, async (req, res) => {
       _id: { $ne: userId },
       $or: [{ username: regex }, { fullName: regex }, { name: regex }, { email: regex }],
     })
-      .select("_id publicId username fullName name avatar profilePic photo")
+      .select("_id publicId username fullName name avatar cover isVerified accountStatus profilePic photo")
       .limit(20)
       .lean();
 
@@ -1853,15 +2147,15 @@ app.get("/api/users/:id", authMiddlewareOptional, async (req, res) => {
     let u = null;
     if (mongoose.Types.ObjectId.isValid(idParam)) {
       u = await User.findById(idParam).select(
-        "publicId username fullName avatar createdAt followers following bio location website isPrivate blockedUsers"
+        "publicId username fullName avatar cover isVerified accountStatus privacy createdAt followers following bio location website isPrivate blockedUsers mutedUsers"
       );
     } else if (/^SA-\\d+$/i.test(idParam)) {
       u = await User.findOne({ publicId: idParam.toUpperCase() }).select(
-        "publicId username fullName avatar createdAt followers following bio location website isPrivate blockedUsers"
+        "publicId username fullName avatar cover isVerified accountStatus privacy createdAt followers following bio location website isPrivate blockedUsers mutedUsers"
       );
     } else {
       u = await User.findOne({ username: normalizeUsername(idParam) }).select(
-        "publicId username fullName avatar createdAt followers following bio location website isPrivate blockedUsers"
+        "publicId username fullName avatar cover isVerified accountStatus privacy createdAt followers following bio location website isPrivate blockedUsers mutedUsers"
       );
     }
     if (!u) return res.status(404).json({ msg: "المستخدم غير موجود" });
@@ -1879,15 +2173,27 @@ app.get("/api/users/:id", authMiddlewareOptional, async (req, res) => {
     // ًں”’ ط­ط§ظ„ط© ط§ظ„ط­ط¸ط± ط¨ظٹظ† ط§ظ„ظ…ط´ط§ظ‡ط¯ ظˆظ‡ط°ط§ ط§ظ„ظ…ط³طھط®ط¯ظ…
     let isBlockedByMe = false;
     let hasBlockedMe = false;
+    let isMutedByMe = false;
 
     if (viewerId) {
-      const viewer = await User.findById(viewerId).select("blockedUsers");
+      const viewer = await User.findById(viewerId).select("blockedUsers mutedUsers");
       const viewerBlocked = ensureArray(viewer?.blockedUsers);
+      const viewerMuted = ensureArray(viewer?.mutedUsers);
       const userBlocked = ensureArray(u.blockedUsers);
 
       isBlockedByMe = viewerBlocked.some((id) => String(id) === String(u._id));
+      isMutedByMe = viewerMuted.some((id) => String(id) === String(u._id));
       hasBlockedMe = userBlocked.some((id) => String(id) === String(viewerId));
     }
+
+    if (viewerId && String(viewerId) !== String(u._id) && !hasBlockedMe) {
+      recordProfileView({ profileUserId: u._id, viewerUserId: viewerId });
+    }
+
+    const privacy = u.privacy || {};
+    const messagePermission = _normalizeMessagePermission(
+      privacy.messagePermission,
+    );
 
     res.json({
       _id: u._id,
@@ -1895,6 +2201,9 @@ app.get("/api/users/:id", authMiddlewareOptional, async (req, res) => {
       username: u.username,
       fullName: u.fullName || "",
       avatar: u.avatar || "",
+      cover: u.cover || "",
+      isVerified: !!u.isVerified,
+      accountStatus: u.accountStatus || "new",
       postsCount,
       followersCount,
       followingCount,
@@ -1904,7 +2213,13 @@ app.get("/api/users/:id", authMiddlewareOptional, async (req, res) => {
       location: u.location || "",
       website: u.website || "",
       isPrivate: !!u.isPrivate,
+      privacy: {
+        showLastSeen: privacy.showLastSeen !== false,
+        hidePhone: privacy.hidePhone !== false,
+        messagePermission,
+      },
       isBlockedByMe,
+      isMutedByMe,
       hasBlockedMe,
     });
   } catch (err) {
@@ -1927,14 +2242,18 @@ app.get("/api/profile", authMiddleware, async (req, res) => {
     const followersCount = user.followers ? user.followers.length : 0;
     const followingCount = user.following ? user.following.length : 0;
 
-      res.json({
-        _id: user._id,
-        publicId: user.publicId || "",
-        username: user.username,
-        fullName: user.fullName || "",
-        email: user.email,
-        avatar: user.avatar || "",
-        postsCount,
+    const privacy = user.privacy || {};
+    res.json({
+      _id: user._id,
+      publicId: user.publicId || "",
+      username: user.username,
+      fullName: user.fullName || "",
+      email: user.email,
+      avatar: user.avatar || "",
+      cover: user.cover || "",
+      isVerified: !!user.isVerified,
+      accountStatus: user.accountStatus || "new",
+      postsCount,
       followersCount,
       followingCount,
       createdAt: user.createdAt,
@@ -1943,6 +2262,16 @@ app.get("/api/profile", authMiddleware, async (req, res) => {
       location: user.location || "",
       website: user.website || "",
       isPrivate: !!user.isPrivate,
+      privacy: {
+        showLastSeen: privacy.showLastSeen !== false,
+        hidePhone: privacy.hidePhone !== false,
+        messagePermission: _normalizeMessagePermission(
+          privacy.messagePermission,
+        ),
+      },
+      lastLoginAt: user.lastLoginAt || null,
+      lastLoginIp: user.lastLoginIp || "",
+      lastLoginDevice: user.lastLoginDevice || "",
     });
   } catch (err) {
     console.error("ERROR in GET /api/profile:", err);
@@ -1950,27 +2279,230 @@ app.get("/api/profile", authMiddleware, async (req, res) => {
   }
 });
 
+app.get("/api/profile/insights", authMiddleware, async (req, res) => {
+  try {
+    const userId = String(req.userId || "").trim();
+    if (!userId) return res.status(401).json({ msg: "غير مصرح" });
+
+    const now = new Date();
+    const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const d30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const [views7d, views30d, viewsTotal, followAgg7, followAgg30, posts] =
+      await Promise.all([
+        ProfileView.countDocuments({ profileUserId: userId, viewedAt: { $gte: d7 } }),
+        ProfileView.countDocuments({ profileUserId: userId, viewedAt: { $gte: d30 } }),
+        ProfileView.countDocuments({ profileUserId: userId }),
+        FollowEvent.aggregate([
+          {
+            $match: {
+              targetUserId: new mongoose.Types.ObjectId(userId),
+              createdAt: { $gte: d7 },
+            },
+          },
+          { $group: { _id: "$action", count: { $sum: 1 } } },
+        ]),
+        FollowEvent.aggregate([
+          {
+            $match: {
+              targetUserId: new mongoose.Types.ObjectId(userId),
+              createdAt: { $gte: d30 },
+            },
+          },
+          { $group: { _id: "$action", count: { $sum: 1 } } },
+        ]),
+        Post.find({ user: userId })
+          .select("_id text imageUrl videoUrl likes comments createdAt")
+          .sort({ createdAt: -1 })
+          .limit(60)
+          .lean(),
+      ]);
+
+    const pullCount = (agg, key) => {
+      const row = Array.isArray(agg) ? agg.find((x) => String(x?._id) === key) : null;
+      return Number(row?.count || 0);
+    };
+
+    const follow7 = pullCount(followAgg7, "follow");
+    const unfollow7 = pullCount(followAgg7, "unfollow");
+    const follow30 = pullCount(followAgg30, "follow");
+    const unfollow30 = pullCount(followAgg30, "unfollow");
+
+    const topPosts = (posts || [])
+      .map((p) => {
+        const likesCount = Array.isArray(p?.likes) ? p.likes.length : 0;
+        const commentsCount = Array.isArray(p?.comments) ? p.comments.length : 0;
+        const score = likesCount * 2 + commentsCount * 3;
+        return {
+          _id: p?._id,
+          text: p?.text || "",
+          imageUrl: p?.imageUrl || "",
+          videoUrl: p?.videoUrl || "",
+          createdAt: p?.createdAt || null,
+          likesCount,
+          commentsCount,
+          score,
+        };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+
+    return res.json({
+      profileViews: {
+        total: viewsTotal,
+        d7: views7d,
+        d30: views30d,
+      },
+      followerGrowth: {
+        d7: follow7 - unfollow7,
+        d30: follow30 - unfollow30,
+        follow7,
+        unfollow7,
+        follow30,
+        unfollow30,
+      },
+      topPosts,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error("GET /api/profile/insights error:", err);
+    return res.status(500).json({ msg: "تعذر جلب إحصائيات الحساب" });
+  }
+});
+
+app.get("/api/security/sessions", authMiddleware, async (req, res) => {
+  try {
+    const userId = String(req.userId || "").trim();
+    const currentSessionId = String(req.sessionId || "").trim();
+    const sessions = await AuthSession.find({
+      userId,
+      isRevoked: false,
+    })
+      .sort({ lastSeenAt: -1, createdAt: -1 })
+      .lean();
+
+    return res.json({
+      currentSessionId,
+      items: (sessions || []).map((s) => ({
+        _id: s._id,
+        userAgent: s.userAgent || "",
+        ip: s.ip || "",
+        platform: s.platform || "",
+        appVersion: s.appVersion || "",
+        createdAt: s.createdAt || null,
+        updatedAt: s.updatedAt || null,
+        lastSeenAt: s.lastSeenAt || null,
+        isCurrent: String(s._id) === currentSessionId,
+      })),
+    });
+  } catch (err) {
+    console.error("GET /api/security/sessions error:", err);
+    return res.status(500).json({ msg: "تعذر جلب الجلسات" });
+  }
+});
+
+app.delete("/api/security/sessions/:id", authMiddleware, async (req, res) => {
+  try {
+    const userId = String(req.userId || "").trim();
+    const sessionId = String(req.params.id || "").trim();
+    if (!sessionId) return res.status(400).json({ msg: "session id مطلوب" });
+
+    const doc = await AuthSession.findOneAndUpdate(
+      {
+        _id: sessionId,
+        userId,
+      },
+      { $set: { isRevoked: true } },
+      { new: true },
+    ).select("_id");
+
+    if (!doc) return res.status(404).json({ msg: "الجلسة غير موجودة" });
+    return res.json({ msg: "تم إلغاء الجلسة", sessionId });
+  } catch (err) {
+    console.error("DELETE /api/security/sessions/:id error:", err);
+    return res.status(500).json({ msg: "تعذر إلغاء الجلسة" });
+  }
+});
+
+app.delete("/api/security/sessions", authMiddleware, async (req, res) => {
+  try {
+    const userId = String(req.userId || "").trim();
+    const currentSessionId = String(req.sessionId || "").trim();
+    const keepCurrent = String(req.query.keepCurrent || "1") !== "0";
+
+    const query = {
+      userId,
+      isRevoked: false,
+      ...(keepCurrent && currentSessionId ? { _id: { $ne: currentSessionId } } : {}),
+    };
+    const result = await AuthSession.updateMany(query, { $set: { isRevoked: true } });
+    return res.json({
+      msg: "تم تسجيل الخروج من الأجهزة الأخرى",
+      updated: Number(result?.modifiedCount || 0),
+      keepCurrent,
+    });
+  } catch (err) {
+    console.error("DELETE /api/security/sessions error:", err);
+    return res.status(500).json({ msg: "تعذر تنفيذ العملية" });
+  }
+});
+
+app.get("/api/security/settings", authMiddleware, async (req, res) => {
+  return res.json({
+    twoFactorEnabled: false,
+    twoFactorStatus: "coming_soon",
+  });
+});
+
 // âœ… طھط؛ظٹظٹط± ط®طµظˆطµظٹط© ط§ظ„ط­ط³ط§ط¨
 app.patch("/api/users/me/privacy", authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    let { isPrivate } = req.body;
+    const parseBool = (raw, fallback) => {
+      if (raw === undefined || raw === null) return fallback;
+      if (typeof raw === "boolean") return raw;
+      const v = String(raw).trim().toLowerCase();
+      if (v === "1" || v === "true" || v === "yes") return true;
+      if (v === "0" || v === "false" || v === "no") return false;
+      return fallback;
+    };
 
-    if (typeof isPrivate === "string") {
-      isPrivate = isPrivate === "true" || isPrivate === "1";
-    } else {
-      isPrivate = !!isPrivate;
-    }
+    const existing = await User.findById(userId).select("isPrivate privacy");
+    if (!existing) return res.status(404).json({ msg: "المستخدم غير موجود" });
 
-    const user = await User.findByIdAndUpdate(userId, { isPrivate }, { new: true }).select(
-      "username fullName email avatar isPrivate"
-    );
+    const nextIsPrivate = parseBool(req.body?.isPrivate, !!existing.isPrivate);
+    const oldPrivacy = existing.privacy || {};
+    const nextPrivacy = {
+      showLastSeen: parseBool(req.body?.showLastSeen, oldPrivacy.showLastSeen !== false),
+      hidePhone: parseBool(req.body?.hidePhone, oldPrivacy.hidePhone !== false),
+      messagePermission: _normalizeMessagePermission(
+        req.body?.messagePermission || oldPrivacy.messagePermission,
+      ),
+    };
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        isPrivate: nextIsPrivate,
+        privacy: nextPrivacy,
+      },
+      { new: true },
+    ).select("username fullName email avatar isPrivate privacy");
 
     if (!user) return res.status(404).json({ msg: "المستخدم غير موجود" });
 
     res.json({
-      msg: isPrivate ? "تم ضبط الحساب كحساب خاص" : "تم ضبط الحساب كحساب عام",
+      msg: nextIsPrivate
+        ? "تم ضبط الحساب كحساب خاص"
+        : "تم ضبط الحساب كحساب عام",
       isPrivate: !!user.isPrivate,
+      privacy: {
+        showLastSeen: user.privacy?.showLastSeen !== false,
+        hidePhone: user.privacy?.hidePhone !== false,
+        messagePermission: _normalizeMessagePermission(
+          user.privacy?.messagePermission,
+        ),
+      },
     });
   } catch (err) {
     console.error("ERROR in PATCH /api/users/me/privacy:", err);
@@ -1978,14 +2510,48 @@ app.patch("/api/users/me/privacy", authMiddleware, async (req, res) => {
   }
 });
 
+app.get("/api/profile/check-username", authMiddleware, async (req, res) => {
+  try {
+    const userId = String(req.userId || "");
+    const raw = String(req.query?.username || "").trim();
+    const normalized = toEnglishHandle(raw);
+    if (!normalized || normalized.length < 3) {
+      return res.status(400).json({
+        msg: "اسم المستخدم يجب أن يكون 3 أحرف على الأقل",
+        available: false,
+        normalized,
+      });
+    }
+    const exists = await User.exists({
+      username: normalized,
+      _id: { $ne: userId },
+    });
+    return res.json({
+      available: !exists,
+      normalized,
+    });
+  } catch (err) {
+    console.error("GET /api/profile/check-username error:", err);
+    return res.status(500).json({ msg: "تعذر فحص اسم المستخدم" });
+  }
+});
+
 // PUT /api/profile
-app.put("/api/profile", authMiddleware, upload.single("avatar"), async (req, res) => {
+app.put(
+  "/api/profile",
+  authMiddleware,
+  runUpload(upload.fields([{ name: "avatar", maxCount: 1 }, { name: "cover", maxCount: 1 }])),
+  async (req, res) => {
   try {
     const userId = req.userId;
     const { username, fullName, name, bio, location, website } = req.body;
     let avatarPath;
+    let coverPath;
 
-    if (req.file) avatarPath = buildUploadsUrlFromMulterFile(req.file);
+    const avatarFile = req.files?.avatar?.[0] || req.file || null;
+    const coverFile = req.files?.cover?.[0] || null;
+    if (avatarFile) avatarPath = buildUploadsUrlFromMulterFile(avatarFile);
+    if (coverFile) coverPath = buildUploadsUrlFromMulterFile(coverFile);
 
     const updateData = {};
     if (typeof fullName === "string" || typeof name === "string") {
@@ -2004,6 +2570,7 @@ app.put("/api/profile", authMiddleware, upload.single("avatar"), async (req, res
     if (typeof location === "string") updateData.location = location.trim();
     if (typeof website === "string") updateData.website = website.trim();
     if (avatarPath) updateData.avatar = avatarPath;
+    if (coverPath) updateData.cover = coverPath;
 
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true }).select("-password");
     if (!updatedUser) return res.status(404).json({ msg: "المستخدم غير موجود" });
@@ -2018,10 +2585,20 @@ app.put("/api/profile", authMiddleware, upload.single("avatar"), async (req, res
           fullName: updatedUser.fullName || "",
           email: updatedUser.email,
           avatar: updatedUser.avatar || "",
+          cover: updatedUser.cover || "",
+          isVerified: !!updatedUser.isVerified,
+          accountStatus: updatedUser.accountStatus || "new",
           bio: updatedUser.bio || "",
           location: updatedUser.location || "",
         website: updatedUser.website || "",
         isPrivate: !!updatedUser.isPrivate,
+        privacy: {
+          showLastSeen: updatedUser.privacy?.showLastSeen !== false,
+          hidePhone: updatedUser.privacy?.hidePhone !== false,
+          messagePermission: _normalizeMessagePermission(
+            updatedUser.privacy?.messagePermission,
+          ),
+        },
       },
     });
   } catch (err) {
@@ -2058,6 +2635,11 @@ app.post("/api/users/:id/follow", authMiddleware, async (req, res) => {
       targetUser.followers = targetUser.followers.filter((id) => String(id) !== String(currentUserId));
       await currentUser.save();
       await targetUser.save();
+      FollowEvent.create({
+        targetUserId,
+        actorUserId: currentUserId,
+        action: "unfollow",
+      }).catch(() => {});
 
       return res.json({
         msg: "تم إلغاء المتابعة",
@@ -2070,6 +2652,17 @@ app.post("/api/users/:id/follow", authMiddleware, async (req, res) => {
       targetUser.followers.push(currentUserId);
       await currentUser.save();
       await targetUser.save();
+      FollowEvent.create({
+        targetUserId,
+        actorUserId: currentUserId,
+        action: "follow",
+      }).catch(() => {});
+      if (targetUser.followers.length >= 100 && targetUser.accountStatus === "active") {
+        User.updateOne(
+          { _id: targetUserId },
+          { $set: { accountStatus: "trusted" } },
+        ).catch(() => {});
+      }
 
       return res.json({
         msg: "تمت المتابعة",
@@ -2143,17 +2736,85 @@ app.post("/api/users/:id/block-toggle", authMiddleware, async (req, res) => {
 /*  ظ‚ظˆط§ط¦ظ… ط§ظ„ظ…طھط§ط¨ط¹ظٹظ† / طھطھط§ط¨ظگط¹ */
 /* ========================= */
 
+app.post("/api/users/:id/mute-toggle", authMiddleware, async (req, res) => {
+  try {
+    const targetUserId = String(req.params.id || "").trim();
+    const currentUserId = String(req.userId || "").trim();
+    if (!targetUserId) return res.status(400).json({ msg: "user id مطلوب" });
+    if (targetUserId === currentUserId) {
+      return res.status(400).json({ msg: "لا يمكنك كتم نفسك" });
+    }
+
+    const currentUser = await User.findById(currentUserId).select("mutedUsers");
+    if (!currentUser) return res.status(404).json({ msg: "المستخدم غير موجود" });
+    currentUser.mutedUsers = ensureArray(currentUser.mutedUsers);
+
+    const alreadyMuted = currentUser.mutedUsers.some(
+      (id) => String(id) === targetUserId,
+    );
+    if (alreadyMuted) {
+      currentUser.mutedUsers = currentUser.mutedUsers.filter(
+        (id) => String(id) !== targetUserId,
+      );
+    } else {
+      currentUser.mutedUsers.push(targetUserId);
+    }
+    await currentUser.save();
+    return res.json({
+      muted: !alreadyMuted,
+      mutedCount: currentUser.mutedUsers.length,
+      msg: !alreadyMuted ? "تم كتم المستخدم" : "تم إلغاء الكتم",
+    });
+  } catch (err) {
+    console.error("POST /api/users/:id/mute-toggle error:", err);
+    return res.status(500).json({ msg: "خطأ في تحديث الكتم" });
+  }
+});
+
 app.get("/api/users/:id/followers", authMiddlewareOptional, async (req, res) => {
   try {
     const userId = req.params.id;
+    const viewerId = String(req.userId || "").trim();
+    const q = String(req.query.q || "").trim().toLowerCase();
+    const limit = Math.min(100, Math.max(1, Number.parseInt(String(req.query.limit || "30"), 10) || 30));
+    const cursor = Math.max(0, Number.parseInt(String(req.query.cursor || "0"), 10) || 0);
 
     const user = await User.findById(userId)
-      .populate("followers", "username fullName email avatar createdAt")
+      .populate("followers", "username fullName email avatar isVerified createdAt")
       .select("_id");
 
     if (!user) return res.status(404).json({ msg: "المستخدم غير موجود" });
+    const viewer = viewerId
+      ? await User.findById(viewerId).select("following blockedUsers mutedUsers").lean()
+      : null;
+    const followingSet = new Set(ensureArray(viewer?.following).map((x) => String(x)));
+    const blockedSet = new Set(ensureArray(viewer?.blockedUsers).map((x) => String(x)));
+    const mutedSet = new Set(ensureArray(viewer?.mutedUsers).map((x) => String(x)));
 
-    return res.json(user.followers || []);
+    let items = (user.followers || []).map((u) => ({
+      _id: u?._id,
+      username: u?.username || "",
+      fullName: u?.fullName || "",
+      email: u?.email || "",
+      avatar: u?.avatar || "",
+      isVerified: !!u?.isVerified,
+      createdAt: u?.createdAt || null,
+      isFollowing: followingSet.has(String(u?._id || "")),
+      isBlockedByMe: blockedSet.has(String(u?._id || "")),
+      isMutedByMe: mutedSet.has(String(u?._id || "")),
+    }));
+    if (q) {
+      items = items.filter((u) => {
+        const a = String(u.username || "").toLowerCase();
+        const b = String(u.fullName || "").toLowerCase();
+        const c = String(u.email || "").toLowerCase();
+        return a.includes(q) || b.includes(q) || c.includes(q);
+      });
+    }
+
+    const page = items.slice(cursor, cursor + limit);
+    const nextCursor = cursor + page.length < items.length ? String(cursor + page.length) : null;
+    return res.json({ items: page, nextCursor, total: items.length });
   } catch (err) {
     console.error("GET /api/users/:id/followers error:", err);
     res.status(500).json({ msg: "حدث خطأ أثناء جلب قائمة المتابعين" });
@@ -2163,17 +2824,113 @@ app.get("/api/users/:id/followers", authMiddlewareOptional, async (req, res) => 
 app.get("/api/users/:id/following", authMiddlewareOptional, async (req, res) => {
   try {
     const userId = req.params.id;
+    const viewerId = String(req.userId || "").trim();
+    const q = String(req.query.q || "").trim().toLowerCase();
+    const limit = Math.min(100, Math.max(1, Number.parseInt(String(req.query.limit || "30"), 10) || 30));
+    const cursor = Math.max(0, Number.parseInt(String(req.query.cursor || "0"), 10) || 0);
 
     const user = await User.findById(userId)
-      .populate("following", "username fullName email avatar createdAt")
+      .populate("following", "username fullName email avatar isVerified createdAt")
       .select("_id");
 
     if (!user) return res.status(404).json({ msg: "المستخدم غير موجود" });
+    const viewer = viewerId
+      ? await User.findById(viewerId).select("following blockedUsers mutedUsers").lean()
+      : null;
+    const followingSet = new Set(ensureArray(viewer?.following).map((x) => String(x)));
+    const blockedSet = new Set(ensureArray(viewer?.blockedUsers).map((x) => String(x)));
+    const mutedSet = new Set(ensureArray(viewer?.mutedUsers).map((x) => String(x)));
 
-    return res.json(user.following || []);
+    let items = (user.following || []).map((u) => ({
+      _id: u?._id,
+      username: u?.username || "",
+      fullName: u?.fullName || "",
+      email: u?.email || "",
+      avatar: u?.avatar || "",
+      isVerified: !!u?.isVerified,
+      createdAt: u?.createdAt || null,
+      isFollowing: followingSet.has(String(u?._id || "")),
+      isBlockedByMe: blockedSet.has(String(u?._id || "")),
+      isMutedByMe: mutedSet.has(String(u?._id || "")),
+    }));
+    if (q) {
+      items = items.filter((u) => {
+        const a = String(u.username || "").toLowerCase();
+        const b = String(u.fullName || "").toLowerCase();
+        const c = String(u.email || "").toLowerCase();
+        return a.includes(q) || b.includes(q) || c.includes(q);
+      });
+    }
+
+    const page = items.slice(cursor, cursor + limit);
+    const nextCursor = cursor + page.length < items.length ? String(cursor + page.length) : null;
+    return res.json({ items: page, nextCursor, total: items.length });
   } catch (err) {
     console.error("GET /api/users/:id/following error:", err);
     res.status(500).json({ msg: "حدث خطأ أثناء جلب قائمة تتابِع" });
+  }
+});
+
+app.get("/api/users/:id/posts", authMiddlewareOptional, async (req, res) => {
+  try {
+    const profileId = String(req.params.id || "").trim();
+    const viewerId = String(req.userId || "").trim();
+    if (!profileId) return res.status(400).json({ msg: "user id مطلوب" });
+
+    const tab = String(req.query.tab || "posts").trim().toLowerCase();
+    const limit = Math.min(40, Math.max(1, Number.parseInt(String(req.query.limit || "18"), 10) || 18));
+    const beforeRaw = String(req.query.before || "").trim();
+    const beforeDate = beforeRaw ? new Date(beforeRaw) : null;
+
+    const profileUser = await User.findById(profileId).select(
+      "_id isPrivate followers",
+    ).lean();
+    if (!profileUser) return res.status(404).json({ msg: "المستخدم غير موجود" });
+
+    const isOwner = viewerId && String(profileUser._id) === viewerId;
+    const isFollower = viewerId
+      ? ensureArray(profileUser.followers).some((id) => String(id) === viewerId)
+      : false;
+    if (profileUser.isPrivate && !isOwner && !isFollower) {
+      return res.status(403).json({ msg: "هذا الحساب خاص" });
+    }
+
+    if (tab === "tagged") {
+      return res.json({ items: [], nextCursor: null });
+    }
+
+    const query = { user: profileId };
+    if (tab === "reels") {
+      query.videoUrl = { $exists: true, $nin: ["", null] };
+    } else if (tab === "media") {
+      query.$or = [
+        { imageUrl: { $exists: true, $nin: ["", null] } },
+        { videoUrl: { $exists: true, $nin: ["", null] } },
+      ];
+    }
+    if (beforeDate && !Number.isNaN(beforeDate.getTime())) {
+      query.createdAt = { $lt: beforeDate };
+    }
+
+    const docs = await Post.find(query)
+      .sort({ createdAt: -1 })
+      .limit(limit + 1)
+      .populate("user", "username fullName email avatar isPrivate followers")
+      .populate("comments.user", "username fullName avatar")
+      .populate("likes", "username fullName avatar")
+      .lean();
+
+    const hasMore = docs.length > limit;
+    const items = hasMore ? docs.slice(0, limit) : docs;
+    const last = items.length ? items[items.length - 1] : null;
+    const nextCursor = hasMore && last?.createdAt
+      ? new Date(last.createdAt).toISOString()
+      : null;
+
+    return res.json({ items, nextCursor });
+  } catch (err) {
+    console.error("GET /api/users/:id/posts error:", err);
+    return res.status(500).json({ msg: "تعذر جلب منشورات الملف" });
   }
 });
 
@@ -2212,6 +2969,11 @@ app.delete("/api/users/:id/followers/:followerId", authMiddleware, async (req, r
 
     await profileUser.save();
     await followerUser.save();
+    FollowEvent.create({
+      targetUserId: profileOwnerId,
+      actorUserId: followerId,
+      action: "unfollow",
+    }).catch(() => {});
 
     return res.json({
       msg: "تمت إزالة المتابع",
@@ -2543,26 +3305,67 @@ app.post("/api/calls/logs/clear-for-me", authMiddleware, async (req, res) => {
 
 app.get("/api/chat/conversations", authMiddleware, async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = String(req.userId || "");
+    const limit = Math.min(260, Math.max(20, parseInt(req.query.limit || "220", 10) || 220));
+    const sinceRaw = String(req.query.since || req.query.updatedAfter || "").trim();
+    let sinceDate = null;
+    if (sinceRaw) {
+      const d = new Date(sinceRaw);
+      if (!isNaN(d.getTime())) sinceDate = d;
+    }
 
-    const conversations = await Conversation.find({
-      deletedFor: { $ne: userId },
-      $or: [
-        { participants: userId },
-        { owner: userId },
-        { admins: userId },
-        { createdBy: userId },
-      ],
-    })
+    const membershipOr = [
+      { participants: userId },
+      { owner: userId },
+      { admins: userId },
+      { createdBy: userId },
+    ];
+
+    const query = sinceDate
+      ? {
+          deletedFor: { $ne: userId },
+          $and: [
+            { $or: membershipOr },
+            {
+              $or: [{ updatedAt: { $gte: sinceDate } }, { lastMessageAt: { $gte: sinceDate } }],
+            },
+          ],
+        }
+      : {
+          deletedFor: { $ne: userId },
+          $or: membershipOr,
+        };
+
+    const conversations = await Conversation.find(query)
       .sort({ lastMessageAt: -1, updatedAt: -1 })
+      .limit(limit)
+      .select(
+        "_id type isGroup title avatar participants members owner admins createdBy lastMessage lastMessageAt updatedAt deletedFor"
+      )
       .populate({
         path: "participants",
         select: "username fullName avatar isVerified",
+        options: { lean: true },
       })
       .populate({
         path: "lastMessage",
-        populate: { path: "sender", select: "username fullName avatar" },
+        select: "_id conversation sender type text attachments createdAt seenBy deletedForAll",
+        populate: {
+          path: "sender",
+          select: "username fullName avatar",
+          options: { lean: true },
+        },
+        options: { lean: true },
+      })
+      .lean();
+
+    if (sinceDate) {
+      return res.json({
+        conversations,
+        delta: true,
+        serverTime: new Date().toISOString(),
       });
+    }
 
     res.json(conversations);
   } catch (err) {
@@ -2581,8 +3384,35 @@ app.post("/api/chat/conversations/start", authMiddleware, async (req, res) => {
       return res.status(400).json({ msg: "لا يمكنك بدء محادثة مع نفسك حالياً" });
     }
 
-    const otherUser = await User.findById(otherUserId).select("username fullName avatar");
+    const otherUser = await User.findById(otherUserId).select(
+      "username fullName avatar privacy followers blockedUsers",
+    );
     if (!otherUser) return res.status(404).json({ msg: "المستخدم غير موجود" });
+
+    const me = await User.findById(userId).select("blockedUsers");
+    const meBlocked = ensureArray(me?.blockedUsers);
+    const otherBlocked = ensureArray(otherUser?.blockedUsers);
+    if (
+      meBlocked.some((id) => String(id) === String(otherUserId)) ||
+      otherBlocked.some((id) => String(id) === String(userId))
+    ) {
+      return res.status(403).json({ msg: "لا يمكن بدء محادثة مع هذا المستخدم" });
+    }
+
+    const msgPermission = _normalizeMessagePermission(
+      otherUser?.privacy?.messagePermission,
+    );
+    if (msgPermission === "none") {
+      return res.status(403).json({ msg: "هذا المستخدم لا يستقبل رسائل جديدة" });
+    }
+    if (msgPermission === "followers") {
+      const isFollower = ensureArray(otherUser?.followers).some(
+        (id) => String(id) === String(userId),
+      );
+      if (!isFollower) {
+        return res.status(403).json({ msg: "يمكن للمتابعين فقط مراسلة هذا المستخدم" });
+      }
+    }
 
     let conversation = await Conversation.findOne({
       isGroup: false,
@@ -2743,61 +3573,88 @@ app.post("/api/chat/spaces", authMiddleware, async (req, res) => {
 
 app.get("/api/chat/conversations/:id/messages", authMiddleware, async (req, res) => {
   try {
-    const userId = req.userId;
-    const conversationId = req.params.id;
+    const userId = String(req.userId || "");
+    const conversationId = String(req.params.id || "");
 
-    const limit = Math.max(1, Math.min(parseInt(req.query.limit || "30", 10) || 30, 80));
+    if (!mongoose.Types.ObjectId.isValid(conversationId)) {
+      return res.status(400).json({ msg: "conversationId غير صالح" });
+    }
 
-    // Cursor style: before = ISO date OR messageId
+    const limit = Math.max(1, Math.min(parseInt(req.query.limit || "30", 10) || 30, 120));
     const beforeRaw = (req.query.before || req.query.beforeCursor || "").toString().trim();
-    let beforeDate = null;
+    const afterRaw = (req.query.after || req.query.afterCursor || "").toString().trim();
 
-    // ظ„ظˆ before ظ‡ظˆ ObjectId â†’ ط®ط° createdAt ظ„ظ„ط±ط³ط§ظ„ط© ظ†ظپط³ظ‡ط§ ظƒظ€ cursor
-    if (beforeRaw && mongoose.Types.ObjectId.isValid(beforeRaw)) {
-      const pivot = await Message.findOne({ _id: beforeRaw, conversation: conversationId })
-        .select("createdAt")
-        .lean();
-      if (pivot?.createdAt) beforeDate = new Date(pivot.createdAt);
-    }
+    const parseCursorDate = async (raw) => {
+      if (!raw) return null;
+      if (mongoose.Types.ObjectId.isValid(raw)) {
+        const pivot = await Message.findOne({ _id: raw, conversation: conversationId })
+          .select("createdAt")
+          .lean();
+        if (pivot?.createdAt) {
+          return new Date(pivot.createdAt);
+        }
+      }
+      const d = new Date(raw);
+      return isNaN(d.getTime()) ? null : d;
+    };
 
-    // ظ„ظˆ before طھط§ط±ظٹط® ISO
-    if (!beforeDate && beforeRaw) {
-      const d = new Date(beforeRaw);
-      if (!isNaN(d.getTime())) beforeDate = d;
-    }
+    const beforeDate = await parseCursorDate(beforeRaw);
+    // If both before+after exist, keep "before" mode (pagination up).
+    const afterDate = beforeDate ? null : await parseCursorDate(afterRaw);
 
-    const conversation = await Conversation.findById(conversationId);
+    const conversation = await Conversation.findById(conversationId).select("_id participants");
     if (!conversation) return res.status(404).json({ msg: "المحادثة غير موجودة" });
 
-    if (!conversation.participants.some((p) => String(p) === String(userId))) {
+    if (!conversation.participants.some((p) => String(p) === userId)) {
       return res.status(403).json({ msg: "لا تملك صلاحية على هذه المحادثة" });
     }
 
+    const mode = afterDate ? "after" : "before";
     const q = {
       conversation: conversationId,
       deletedFor: { $ne: userId },
     };
-    if (beforeDate) {
+    if (afterDate) {
+      q.createdAt = { $gt: afterDate };
+    } else if (beforeDate) {
       q.createdAt = { $lt: beforeDate };
     }
 
-    // ظ†ط¬ظٹط¨ +1 ظ„ظ…ط¹ط±ظپط© hasMore
     const rows = await Message.find(q)
-      .sort({ createdAt: -1 })
+      .sort(afterDate ? { createdAt: 1 } : { createdAt: -1 })
       .limit(limit + 1)
-      .populate("sender", "username fullName avatar");
+      .select(
+        "_id conversation sender clientMsgId type text attachments createdAt updatedAt seenBy replyTo replyPreview forwardOf forwardPreview forwardComment editedAt editedBy deletedForAll reactions"
+      )
+      .populate({
+        path: "sender",
+        select: "username fullName avatar",
+        options: { lean: true },
+      })
+      .lean();
 
     const hasMore = rows.length > limit;
-    const itemsDesc = hasMore ? rows.slice(0, limit) : rows;
+    const page = hasMore ? rows.slice(0, limit) : rows;
 
-    // nextCursor = ط£ظ‚ط¯ظ… ط¹ظ†طµط± ظپظٹ ظ‡ط°ظ‡ ط§ظ„ط¯ظپط¹ط© (ط¢ط®ط± ط¹ظ†طµط± ط¨ط§ظ„ظ€ desc)
-    const oldest = itemsDesc.length ? itemsDesc[itemsDesc.length - 1] : null;
-    const nextCursor = oldest?.createdAt ? new Date(oldest.createdAt).toISOString() : null;
+    let items = page;
+    let nextCursor = null;
 
-    // ظ„ظ„ظˆط§ط¬ظ‡ط©: ظ„ط§ط²ظ… طھظƒظˆظ† طھطµط§ط¹ط¯ظٹ (ط§ظ„ط£ظ‚ط¯ظ… ظپظˆظ‚)
-    const items = itemsDesc.slice().reverse();
+    if (mode === "after") {
+      const newest = page.length ? page[page.length - 1] : null;
+      nextCursor = newest?.createdAt ? new Date(newest.createdAt).toISOString() : null;
+    } else {
+      const oldest = page.length ? page[page.length - 1] : null;
+      nextCursor = oldest?.createdAt ? new Date(oldest.createdAt).toISOString() : null;
+      items = page.slice().reverse();
+    }
 
-    return res.json({ items, hasMore, nextCursor });
+    return res.json({
+      items,
+      hasMore,
+      nextCursor,
+      mode,
+      serverTime: new Date().toISOString(),
+    });
   } catch (err) {
     console.error("GET /api/chat/conversations/:id/messages error:", err);
     res.status(500).json({ msg: "حدث خطأ أثناء جلب الرسائل" });
@@ -2990,15 +3847,46 @@ app.post(
         io.to(`user-${String(userId)}`).emit("new-message", payload);
 
         // ط¥ط±ط³ط§ظ„ ظ„ط¨ط§ظ‚ظٹ ط§ظ„ظ…ط´ط§ط±ظƒظٹظ†
+        const pushTargets = [];
         if (!conversation.isGroup) {
           const receiverId =
             (conversation.participants || []).find((p) => String(p) !== String(userId)) || null;
-          if (receiverId) io.to(`user-${String(receiverId)}`).emit("new-message", payload);
+          if (receiverId) {
+            io.to(`user-${String(receiverId)}`).emit("new-message", payload);
+            pushTargets.push(String(receiverId));
+          }
         } else {
           for (const p of conversation.participants || []) {
             const pid = String(p);
-            if (pid !== String(userId)) io.to(`user-${pid}`).emit("new-message", payload);
+            if (pid !== String(userId)) {
+              io.to(`user-${pid}`).emit("new-message", payload);
+              pushTargets.push(pid);
+            }
           }
+        }
+
+        const senderName = String(
+          payload?.sender?.fullName || payload?.sender?.username || "User"
+        );
+        const normalizedType = String(payload?.type || msgType || "text");
+        const normalizedText = String(payload?.text || text || "");
+        const normalizedAttachments = Array.isArray(payload?.attachments)
+          ? payload.attachments
+          : (Array.isArray(attachments) ? attachments : []);
+        for (const targetUserId of pushTargets) {
+          sendChatMessagePush({
+            toUserId: targetUserId,
+            fromUserId: userId,
+            fromName: senderName,
+            conversationId,
+            conversationTitle: String(conversation?.title || ""),
+            messageId: String(payload?._id || message?._id || ""),
+            messageType: normalizedType,
+            text: normalizedText,
+            attachments: normalizedAttachments,
+          }).catch((e) => {
+            console.error("rest sendChatMessagePush error:", e?.message || e);
+          });
         }
       } catch (e) {
         console.error("socket sync (REST send) error:", e);
