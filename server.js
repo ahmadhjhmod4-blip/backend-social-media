@@ -103,7 +103,27 @@ async function sendIncomingCallPush({ toUserId, fromUserId, type, callId }) {
       },
     };
 
-    await admin.messaging().sendEachForMulticast(message);
+    const result = await admin.messaging().sendEachForMulticast(message);
+    if (result.failureCount > 0) {
+      const invalidTokens = [];
+      for (let i = 0; i < result.responses.length; i++) {
+        const r = result.responses[i];
+        if (r?.success) continue;
+        const code = String(r?.error?.code || "");
+        if (
+          code.includes("registration-token-not-registered") ||
+          code.includes("invalid-registration-token")
+        ) {
+          invalidTokens.push(tokens[i]);
+        }
+      }
+      if (invalidTokens.length) {
+        await NotificationToken.updateOne(
+          { userId: to },
+          { $pull: { tokens: { $in: invalidTokens } } },
+        ).catch(() => {});
+      }
+    }
   } catch (e) {
     console.error("sendIncomingCallPush error:", e?.message || e);
   }
@@ -195,7 +215,27 @@ async function sendChatMessagePush({
       },
     };
 
-    await admin.messaging().sendEachForMulticast(payload);
+    const result = await admin.messaging().sendEachForMulticast(payload);
+    if (result.failureCount > 0) {
+      const invalidTokens = [];
+      for (let i = 0; i < result.responses.length; i++) {
+        const r = result.responses[i];
+        if (r?.success) continue;
+        const code = String(r?.error?.code || "");
+        if (
+          code.includes("registration-token-not-registered") ||
+          code.includes("invalid-registration-token")
+        ) {
+          invalidTokens.push(tokens[i]);
+        }
+      }
+      if (invalidTokens.length) {
+        await NotificationToken.updateOne(
+          { userId: to },
+          { $pull: { tokens: { $in: invalidTokens } } },
+        ).catch(() => {});
+      }
+    }
   } catch (e) {
     console.error("sendChatMessagePush error:", e?.message || e);
   }
