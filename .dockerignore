@@ -1,0 +1,10 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+.env.*
+public.zip
+_c.py
+android
+.vscode
